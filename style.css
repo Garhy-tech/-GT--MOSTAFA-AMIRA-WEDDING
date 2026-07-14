@@ -1,0 +1,68 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: "Cairo", sans-serif;
+  background: radial-gradient(
+    circle at top,
+    #2b2205 0%,
+    #0b0b0b 45%,
+    #000 100%
+  );
+  color: #fff;
+  overflow-x: hidden;
+}
+
+.hero {
+  min-height: 100vh;
+
+  display: flex;
+  flex-direction: column;
+
+  justify-content: center;
+  align-items: center;
+
+  text-align: center;
+
+  padding: 40px;
+}
+
+.hero h1,
+.hero h2 {
+  font-family: "Cinzel", serif;
+
+  font-size: clamp(60px, 8vw, 120px);
+
+  color: #d4af37;
+
+  letter-spacing: 6px;
+
+  text-shadow: 0 0 30px rgba(212, 175, 55, 0.35);
+}
+
+.hero span {
+  font-size: 50px;
+
+  margin: 20px 0;
+
+  color: white;
+}
+
+.hero p {
+  margin-top: 35px;
+
+  font-size: 22px;
+
+  letter-spacing: 6px;
+
+  text-transform: uppercase;
+
+  opacity: 0.8;
+}
