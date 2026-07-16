@@ -20,6 +20,118 @@
   </head>
 
   <body>
+
+    <!-- ═══════════════════════════════════════════
+         ACCESSIBILITY — Skip to main content
+    ════════════════════════════════════════════ -->
+    <a class="skip-to-content" href="#main-content">Skip to main content</a>
+
+    <!-- ═══════════════════════════════════════════
+         PAGE LOADER
+         Shown on initial load; hidden by JS once
+         assets are ready. aria-live announces state.
+    ════════════════════════════════════════════ -->
+    <div id="loader" role="status" aria-label="Loading invitation" aria-live="polite"></div>
+
+    <!-- ═══════════════════════════════════════════
+         APP WRAPPER
+         Single root for scroll, overflow, and
+         stacking-context control.
+    ════════════════════════════════════════════ -->
+    <div id="app">
+
+      <!-- Decoration layer: particles, petals, sparkles.
+           aria-hidden — purely visual, no semantic content. -->
+      <div id="canvas-particles" aria-hidden="true"></div>
+
+      <!-- ─────────────────────────────────────────
+           SITE HEADER
+           role="banner" — one per page, per ARIA spec.
+           Contains: navigation landmark (to be built).
+      ──────────────────────────────────────────── -->
+      <header id="site-header" role="banner">
+        <nav id="site-nav" role="navigation" aria-label="Wedding invitation navigation"></nav>
+      </header>
+
+      <!-- ─────────────────────────────────────────
+           MAIN CONTENT
+           id="main-content" is the skip-link target.
+           All invitation sections live inside here.
+      ──────────────────────────────────────────── -->
+      <main id="main-content" role="main">
+
+        <!-- 01. Hero ─────────────────────────────
+             Crystal arch entrance, M&A monogram,
+             date, CTA. Reference: 01_LUXURY_HERO.png
+        ──────────────────────────────────────── -->
+        <section id="hero" aria-labelledby="hero-heading"></section>
+
+        <!-- 02. Our Story ────────────────────────
+             Couple narrative, editorial layout.
+             Reference: 05_SECTIONS_LAYOUT.png (02)
+        ──────────────────────────────────────── -->
+        <section id="our-story" aria-labelledby="our-story-heading"></section>
+
+        <!-- 03. The Event ────────────────────────
+             Date, time, place — glass info cards.
+             Reference: 05_SECTIONS_LAYOUT.png (03)
+        ──────────────────────────────────────── -->
+        <section id="the-event" aria-labelledby="the-event-heading"></section>
+
+        <!-- 04. The Couple ───────────────────────
+             Couple portrait, love quote card.
+             Reference: 05_SECTIONS_LAYOUT.png (04)
+        ──────────────────────────────────────── -->
+        <section id="the-couple" aria-labelledby="the-couple-heading"></section>
+
+        <!-- 05. Gallery ──────────────────────────
+             Photo memories, masonry grid.
+             Reference: 05_SECTIONS_LAYOUT.png (05)
+        ──────────────────────────────────────── -->
+        <section id="gallery" aria-labelledby="gallery-heading"></section>
+
+        <!-- 06. Countdown ────────────────────────
+             Live timer to wedding date.
+             Reference: 05_SECTIONS_LAYOUT.png (06)
+        ──────────────────────────────────────── -->
+        <section id="countdown" aria-labelledby="countdown-heading"></section>
+
+        <!-- 07. Location ─────────────────────────
+             Google Maps embed, venue info, transport.
+             Reference: 07_RSVP_AND_MAP.png (07-A)
+        ──────────────────────────────────────── -->
+        <section id="location" aria-labelledby="location-heading"></section>
+
+        <!-- 08. RSVP ─────────────────────────────
+             Full RSVP form: name, guests, dietary,
+             accept / decline, success state.
+             Reference: 07_RSVP_AND_MAP.png (07-B)
+        ──────────────────────────────────────── -->
+        <section id="rsvp" aria-labelledby="rsvp-heading"></section>
+
+      </main><!-- /#main-content -->
+
+      <!-- ─────────────────────────────────────────
+           SITE FOOTER
+           role="contentinfo" — one per page.
+           Contains: social share, calendar links,
+           download PDF, copyright.
+      ──────────────────────────────────────────── -->
+      <footer id="site-footer" role="contentinfo"></footer>
+
+    </div><!-- /#app -->
+
+    <!-- ═══════════════════════════════════════════
+         MUSIC PLAYER
+         Fixed position; accessible via button.
+         Audio preload="none" — user-gesture only.
+    ════════════════════════════════════════════ -->
+    <div id="music-player" role="complementary" aria-label="Background music player">
+      <audio id="music-audio" loop preload="none">
+        <source src="assets/audio/music.mp3" type="audio/mpeg" />
+      </audio>
+    </div>
+
     <script src="assets/js/app.js"></script>
   </body>
 </html>
