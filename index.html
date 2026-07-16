@@ -23,115 +23,1051 @@
   <body>
 
     <!-- ═══════════════════════════════════════════
-         ACCESSIBILITY — Skip to main content
+         ACCESSIBILITY — Skip navigation link.
+         Visible on focus; jumps past header into
+         the main landmark for keyboard users.
     ════════════════════════════════════════════ -->
     <a class="skip-to-content" href="#main-content">Skip to main content</a>
 
+
     <!-- ═══════════════════════════════════════════
          PAGE LOADER
-         Shown on initial load; hidden by JS once
-         assets are ready. aria-live announces state.
+         Shown on initial load; JS removes .is-loaded
+         class from <body> once all assets are ready.
+         role="status" + aria-live announce to AT.
     ════════════════════════════════════════════ -->
     <div id="loader" role="status" aria-label="Loading invitation" aria-live="polite"></div>
+
 
     <!-- ═══════════════════════════════════════════
          APP WRAPPER
          Single root for scroll, overflow, and
-         stacking-context control.
+         stacking-context control. All page content
+         except the music player lives here.
     ════════════════════════════════════════════ -->
     <div id="app">
 
-      <!-- Decoration layer: particles, petals, sparkles.
-           aria-hidden — purely visual, no semantic content. -->
+      <!-- Particle / petal canvas layer.
+           Rendered by JS; purely decorative.
+           aria-hidden removes it from the AT tree. -->
       <div id="canvas-particles" aria-hidden="true"></div>
 
-      <!-- ─────────────────────────────────────────
-           SITE HEADER
-           role="banner" — one per page, per ARIA spec.
-           Contains: navigation landmark (to be built).
-      ──────────────────────────────────────────── -->
-      <header id="site-header" role="banner">
-        <nav id="site-nav" role="navigation" aria-label="Wedding invitation navigation"></nav>
-      </header>
 
-      <!-- ─────────────────────────────────────────
+      <!-- ═══════════════════════════════════════════
+           SITE HEADER
+           Sticky global navigation bar.
+           role="banner" — one per page (ARIA spec).
+           .is-scrolled is toggled by JS on scroll.
+      ════════════════════════════════════════════ -->
+      <header id="site-header" role="banner">
+        <div class="section__inner flex-spread">
+
+          <!-- Monogram / brand mark.
+               SVG will be injected here by JS (M + A mark).
+               aria-hidden because the nav links are the real landmark. -->
+          <div class="site-header__monogram" aria-hidden="true"></div>
+
+          <!-- Primary navigation landmark.
+               aria-label distinguishes it from any secondary navs. -->
+          <nav id="site-nav" role="navigation" aria-label="Wedding invitation navigation">
+            <ul class="flex-pill-row" role="list">
+              <li><a href="#our-story">Our Story</a></li>
+              <li><a href="#the-event">The Event</a></li>
+              <li><a href="#the-couple">The Couple</a></li>
+              <li><a href="#gallery">Gallery</a></li>
+              <li><a href="#countdown">Countdown</a></li>
+              <li><a href="#location">Location</a></li>
+              <li><a href="#rsvp">RSVP</a></li>
+            </ul>
+          </nav>
+
+          <!-- Mobile hamburger toggle.
+               aria-expanded is toggled by JS.
+               aria-controls points to the nav element. -->
+          <button
+            class="btn-icon site-header__menu-toggle"
+            type="button"
+            aria-label="Open navigation menu"
+            aria-expanded="false"
+            aria-controls="site-nav"
+          >
+            <!-- Icon injected by JS -->
+          </button>
+
+        </div><!-- /.section__inner -->
+      </header><!-- /#site-header -->
+
+
+      <!-- ═══════════════════════════════════════════
            MAIN CONTENT
            id="main-content" is the skip-link target.
            All invitation sections live inside here.
-      ──────────────────────────────────────────── -->
+      ════════════════════════════════════════════ -->
       <main id="main-content" role="main">
 
-        <!-- 01. Hero ─────────────────────────────
-             Crystal arch entrance, M&A monogram,
-             date, CTA. Reference: 01_LUXURY_HERO.png
-        ──────────────────────────────────────── -->
-        <section id="hero" aria-labelledby="hero-heading"></section>
 
-        <!-- 02. Our Story ────────────────────────
-             Couple narrative, editorial layout.
-             Reference: 05_SECTIONS_LAYOUT.png (02)
-        ──────────────────────────────────────── -->
-        <section id="our-story" aria-labelledby="our-story-heading"></section>
+        <!-- ──────────────────────────────────────────
+             01. HERO
+             Full-viewport opening section.
+             Contains: crystal arch / crest visual,
+             M&A monogram mark, wedding headline (h1),
+             date · time · venue badges, CTA buttons,
+             and a scroll-down indicator.
+             Reference: 01_LUXURY_HERO.png
+        ─────────────────────────────────────────── -->
+        <section
+          id="hero"
+          class="section"
+          aria-labelledby="hero-heading"
+        >
+          <!-- Top-edge ornamental strip (purely decorative) -->
+          <div class="section__decor section__decor--top" aria-hidden="true"></div>
 
-        <!-- 03. The Event ────────────────────────
-             Date, time, place — glass info cards.
-             Reference: 05_SECTIONS_LAYOUT.png (03)
-        ──────────────────────────────────────── -->
-        <section id="the-event" aria-labelledby="the-event-heading"></section>
+          <div class="section__inner flex-center-col">
 
-        <!-- 04. The Couple ───────────────────────
-             Couple portrait, love quote card.
-             Reference: 05_SECTIONS_LAYOUT.png (04)
-        ──────────────────────────────────────── -->
-        <section id="the-couple" aria-labelledby="the-couple-heading"></section>
+            <!-- Crystal arch / crest illustration container.
+                 SVG or canvas element injected by JS / Phase 6.
+                 aria-hidden: decorative framing device. -->
+            <div class="hero__crest" aria-hidden="true"></div>
 
-        <!-- 05. Gallery ──────────────────────────
-             Photo memories, masonry grid.
-             Reference: 05_SECTIONS_LAYOUT.png (05)
-        ──────────────────────────────────────── -->
-        <section id="gallery" aria-labelledby="gallery-heading"></section>
+            <!-- ── Section heading group ────────────────
+                 Eyebrow: ceremonial label
+                 h1:      couple names (Cinzel, rose gold)
+                 Script:  Great Vibes romantic caption
+            ─────────────────────────────────────────── -->
+            <div class="section-title section-title--center">
+              <span class="section-title__eyebrow" aria-hidden="true"></span>
+              <h1 id="hero-heading" class="section-title__heading"></h1>
+              <span class="section-title__script"></span>
+            </div>
 
-        <!-- 06. Countdown ────────────────────────
-             Live timer to wedding date.
+            <!-- Decorative divider between headline and metadata -->
+            <div class="decor-divider" role="presentation" aria-hidden="true">
+              <div class="decor-divider__gem"></div>
+            </div>
+
+            <!-- Date · Time · Venue metadata row.
+                 Rendered as a <dl> for semantic key/value pairing;
+                 displayed via flex-pill-row utility. -->
+            <dl class="hero__meta flex-pill-row">
+              <div class="hero__meta-item flex-stack">
+                <dt class="sr-only">Date</dt>
+                <dd><span class="badge badge--rose-gold"></span></dd>
+              </div>
+              <div class="hero__meta-item flex-stack">
+                <dt class="sr-only">Time</dt>
+                <dd><span class="badge badge--rose-gold"></span></dd>
+              </div>
+              <div class="hero__meta-item flex-stack">
+                <dt class="sr-only">Venue</dt>
+                <dd><span class="badge badge--emerald"></span></dd>
+              </div>
+            </dl>
+
+            <!-- Primary CTA button group -->
+            <div class="hero__actions flex-pill-row" role="group" aria-label="Primary actions">
+              <!-- RSVP anchor — primary action -->
+              <a href="#rsvp" class="btn btn-primary btn--lg"></a>
+              <!-- Location / directions anchor -->
+              <a href="#location" class="btn btn-ghost btn--lg"></a>
+            </div>
+
+            <!-- Scroll-down indicator.
+                 .is-hidden toggled by JS after user scrolls. -->
+            <div class="scroll-indicator" aria-hidden="true">
+              <div class="scroll-indicator__mouse">
+                <div class="scroll-indicator__dot"></div>
+              </div>
+              <span class="scroll-indicator__label sr-only">Scroll to explore</span>
+            </div>
+
+          </div><!-- /.section__inner -->
+
+          <!-- Bottom-edge ornamental strip (purely decorative) -->
+          <div class="section__decor section__decor--bottom" aria-hidden="true"></div>
+        </section><!-- /#hero -->
+
+
+        <!-- ──────────────────────────────────────────
+             02. COUNTDOWN
+             Live timer counting down to the wedding
+             moment. Four glass units: Days, Hours,
+             Minutes, Seconds. JS drives the numbers.
              Reference: 05_SECTIONS_LAYOUT.png (06)
-        ──────────────────────────────────────── -->
-        <section id="countdown" aria-labelledby="countdown-heading"></section>
+        ─────────────────────────────────────────── -->
+        <section
+          id="countdown"
+          class="section section--dark"
+          aria-labelledby="countdown-heading"
+        >
+          <div class="section__inner">
 
-        <!-- 07. Location ─────────────────────────
-             Google Maps embed, venue info, transport.
+            <!-- Section heading group -->
+            <div class="section-title section-title--center section-title--inverse rhythm-sm">
+              <span class="section-title__eyebrow" aria-hidden="true"></span>
+              <h2 id="countdown-heading" class="section-title__heading"></h2>
+              <span class="section-title__script"></span>
+            </div>
+
+            <div class="decor-divider decor-divider--emerald" role="presentation" aria-hidden="true">
+              <div class="decor-divider__gem"></div>
+            </div>
+
+            <!-- Live countdown timer.
+                 role="timer" + aria-live="polite" let screen readers
+                 announce updates without being intrusive.
+                 Each .countdown-unit is a semantic grouping of
+                 number + label; JS writes to [data-countdown] attrs. -->
+            <div
+              class="grid-countdown"
+              role="timer"
+              aria-live="polite"
+              aria-label="Time remaining until the wedding"
+              id="countdown-timer"
+            >
+
+              <!-- Days -->
+              <div class="countdown-unit" aria-label="Days remaining">
+                <span
+                  class="countdown-unit__number"
+                  data-countdown="days"
+                  aria-atomic="true"
+                ></span>
+                <span class="countdown-unit__label"></span>
+              </div>
+
+              <!-- Separator: decorative colon (hidden from AT) -->
+              <div class="countdown-unit__sep" aria-hidden="true">:</div>
+
+              <!-- Hours -->
+              <div class="countdown-unit" aria-label="Hours remaining">
+                <span
+                  class="countdown-unit__number"
+                  data-countdown="hours"
+                  aria-atomic="true"
+                ></span>
+                <span class="countdown-unit__label"></span>
+              </div>
+
+              <!-- Separator -->
+              <div class="countdown-unit__sep" aria-hidden="true">:</div>
+
+              <!-- Minutes -->
+              <div class="countdown-unit" aria-label="Minutes remaining">
+                <span
+                  class="countdown-unit__number"
+                  data-countdown="minutes"
+                  aria-atomic="true"
+                ></span>
+                <span class="countdown-unit__label"></span>
+              </div>
+
+              <!-- Separator -->
+              <div class="countdown-unit__sep" aria-hidden="true">:</div>
+
+              <!-- Seconds -->
+              <div class="countdown-unit" aria-label="Seconds remaining">
+                <span
+                  class="countdown-unit__number"
+                  data-countdown="seconds"
+                  aria-atomic="true"
+                ></span>
+                <span class="countdown-unit__label"></span>
+              </div>
+
+            </div><!-- /#countdown-timer -->
+
+          </div><!-- /.section__inner -->
+        </section><!-- /#countdown -->
+
+
+        <!-- ──────────────────────────────────────────
+             03. OUR STORY
+             Narrative timeline of the couple's journey.
+             Vertical connector on mobile; horizontal
+             on desktop (≥1200px, CSS handles switch).
+             Reference: 05_SECTIONS_LAYOUT.png (02)
+        ─────────────────────────────────────────── -->
+        <section
+          id="our-story"
+          class="section section--blush-soft"
+          aria-labelledby="our-story-heading"
+        >
+          <div class="section__inner rhythm">
+
+            <!-- Section heading group -->
+            <div class="section-title section-title--center">
+              <span class="section-title__eyebrow" aria-hidden="true"></span>
+              <h2 id="our-story-heading" class="section-title__heading"></h2>
+              <span class="section-title__script"></span>
+            </div>
+
+            <div class="decor-divider" role="presentation" aria-hidden="true">
+              <div class="decor-divider__gem"></div>
+            </div>
+
+            <!-- Story timeline.
+                 Each .timeline-item is a chapter: marker + content.
+                 .timeline-item--active marks the current / most
+                 recent event. JS can add this class dynamically.
+                 h3 headings are sub-headings of this section's h2. -->
+            <ol class="timeline" aria-label="Our story timeline">
+
+              <!-- Chapter 01 — First meeting -->
+              <li class="timeline-item">
+                <div class="timeline-item__marker" aria-hidden="true"></div>
+                <div class="timeline-item__content">
+                  <time class="timeline-item__time" datetime=""></time>
+                  <h3 class="timeline-item__title"></h3>
+                  <!-- No description paragraph — content phase -->
+                </div>
+              </li>
+
+              <!-- Chapter 02 — First date -->
+              <li class="timeline-item">
+                <div class="timeline-item__marker" aria-hidden="true"></div>
+                <div class="timeline-item__content">
+                  <time class="timeline-item__time" datetime=""></time>
+                  <h3 class="timeline-item__title"></h3>
+                </div>
+              </li>
+
+              <!-- Chapter 03 — The proposal -->
+              <li class="timeline-item">
+                <div class="timeline-item__marker" aria-hidden="true"></div>
+                <div class="timeline-item__content">
+                  <time class="timeline-item__time" datetime=""></time>
+                  <h3 class="timeline-item__title"></h3>
+                </div>
+              </li>
+
+              <!-- Chapter 04 — The wedding day (active) -->
+              <li class="timeline-item timeline-item--active">
+                <div class="timeline-item__marker" aria-hidden="true"></div>
+                <div class="timeline-item__content">
+                  <time class="timeline-item__time" datetime="2026-07-31"></time>
+                  <h3 class="timeline-item__title"></h3>
+                </div>
+              </li>
+
+            </ol><!-- /.timeline -->
+
+          </div><!-- /.section__inner -->
+        </section><!-- /#our-story -->
+
+
+        <!-- ──────────────────────────────────────────
+             04. THE EVENT
+             Wedding day details: date, time, venue,
+             dress code. Four glass info-cards in a
+             responsive grid (1 → 3 → 4 columns).
+             Reference: 05_SECTIONS_LAYOUT.png (03)
+        ─────────────────────────────────────────── -->
+        <section
+          id="the-event"
+          class="section section--crystal"
+          aria-labelledby="the-event-heading"
+        >
+          <div class="section__inner rhythm">
+
+            <!-- Section heading group -->
+            <div class="section-title section-title--center">
+              <span class="section-title__eyebrow" aria-hidden="true"></span>
+              <h2 id="the-event-heading" class="section-title__heading"></h2>
+              <span class="section-title__script"></span>
+            </div>
+
+            <div class="decor-divider" role="presentation" aria-hidden="true">
+              <div class="decor-divider__gem"></div>
+            </div>
+
+            <!-- Info cards grid.
+                 Four semantic cards, each with icon zone +
+                 machine-readable label + human value + sub-value.
+                 Content (text, icon) is filled in Phase 6. -->
+            <dl class="grid-info-cards">
+
+              <!-- Card: Date -->
+              <div class="info-card" role="group" aria-label="Wedding date">
+                <div class="info-card__icon" aria-hidden="true"></div>
+                <dt class="info-card__label"></dt>
+                <dd class="info-card__value"></dd>
+                <span class="info-card__sub"></span>
+              </div>
+
+              <!-- Card: Time -->
+              <div class="info-card" role="group" aria-label="Wedding time">
+                <div class="info-card__icon" aria-hidden="true"></div>
+                <dt class="info-card__label"></dt>
+                <dd class="info-card__value"></dd>
+                <span class="info-card__sub"></span>
+              </div>
+
+              <!-- Card: Venue -->
+              <div class="info-card" role="group" aria-label="Venue">
+                <div class="info-card__icon" aria-hidden="true"></div>
+                <dt class="info-card__label"></dt>
+                <dd class="info-card__value"></dd>
+                <span class="info-card__sub"></span>
+              </div>
+
+              <!-- Card: Dress Code -->
+              <div class="info-card" role="group" aria-label="Dress code">
+                <div class="info-card__icon" aria-hidden="true"></div>
+                <dt class="info-card__label"></dt>
+                <dd class="info-card__value"></dd>
+                <span class="info-card__sub"></span>
+              </div>
+
+            </dl><!-- /.grid-info-cards -->
+
+          </div><!-- /.section__inner -->
+        </section><!-- /#the-event -->
+
+
+        <!-- ──────────────────────────────────────────
+             05. THE COUPLE
+             Two-column editorial layout.
+             Left column: portrait photograph container.
+             Right column: love quote block.
+             Desktop: 2fr / 3fr asymmetric split (CSS).
+             Reference: 05_SECTIONS_LAYOUT.png (04)
+        ─────────────────────────────────────────── -->
+        <section
+          id="the-couple"
+          class="section"
+          aria-labelledby="the-couple-heading"
+        >
+          <div class="section__inner--xl rhythm">
+
+            <!-- Section heading group -->
+            <div class="section-title section-title--center">
+              <span class="section-title__eyebrow" aria-hidden="true"></span>
+              <h2 id="the-couple-heading" class="section-title__heading"></h2>
+              <span class="section-title__script"></span>
+            </div>
+
+            <div class="decor-divider" role="presentation" aria-hidden="true">
+              <div class="decor-divider__gem"></div>
+            </div>
+
+            <!-- Editorial split: portrait | quote -->
+            <div class="grid-editorial">
+
+              <!-- Portrait column.
+                   <figure> provides semantic wrapper for media.
+                   <figcaption> will carry the couple name in Phase 6.
+                   No <img> yet — asset supplied in content phase. -->
+              <figure class="couple__portrait card-crystal">
+                <div class="couple__portrait-media" aria-hidden="true"></div>
+                <figcaption class="sr-only"></figcaption>
+              </figure>
+
+              <!-- Quote / narrative column -->
+              <div class="couple__narrative flex-stack">
+
+                <blockquote class="quote-block">
+                  <!-- Great Vibes script quote text — filled Phase 6 -->
+                  <p class="quote-block__text"></p>
+                  <footer>
+                    <cite class="quote-block__attribution"></cite>
+                  </footer>
+                </blockquote>
+
+                <!-- Couple badge identifiers -->
+                <div class="flex-pill-row">
+                  <span class="badge badge--blush"></span>
+                  <span class="badge badge--emerald"></span>
+                </div>
+
+              </div><!-- /.couple__narrative -->
+
+            </div><!-- /.grid-editorial -->
+
+          </div><!-- /.section__inner--xl -->
+        </section><!-- /#the-couple -->
+
+
+        <!-- ──────────────────────────────────────────
+             06. GALLERY
+             Photo memory grid.
+             2 cols mobile → 3 cols tablet → 4 cols desktop.
+             Each gallery-item is a <figure> with overlay
+             and caption revealed on hover / focus.
+             Reference: 05_SECTIONS_LAYOUT.png (05)
+        ─────────────────────────────────────────── -->
+        <section
+          id="gallery"
+          class="section section--blush-soft"
+          aria-labelledby="gallery-heading"
+        >
+          <div class="section__inner--xl rhythm">
+
+            <!-- Section heading group -->
+            <div class="section-title section-title--center">
+              <span class="section-title__eyebrow" aria-hidden="true"></span>
+              <h2 id="gallery-heading" class="section-title__heading"></h2>
+              <span class="section-title__script"></span>
+            </div>
+
+            <div class="decor-divider" role="presentation" aria-hidden="true">
+              <div class="decor-divider__gem"></div>
+            </div>
+
+            <!-- Gallery grid.
+                 6 items; images and captions filled in Phase 6.
+                 Each <figure> is keyboard-focusable (tabindex="0")
+                 so the overlay caption is reachable without a mouse. -->
+            <ul class="grid-gallery" role="list" aria-label="Photo gallery">
+
+              <li>
+                <figure class="gallery-item" tabindex="0">
+                  <div class="gallery-item__media">
+                    <!-- <img> inserted Phase 6 with src, alt, loading="lazy" -->
+                    <div class="gallery-item__img" aria-hidden="true"></div>
+                    <div class="gallery-item__overlay" aria-hidden="true"></div>
+                  </div>
+                  <figcaption class="gallery-item__caption sr-only"></figcaption>
+                </figure>
+              </li>
+
+              <li>
+                <figure class="gallery-item" tabindex="0">
+                  <div class="gallery-item__media">
+                    <div class="gallery-item__img" aria-hidden="true"></div>
+                    <div class="gallery-item__overlay" aria-hidden="true"></div>
+                  </div>
+                  <figcaption class="gallery-item__caption sr-only"></figcaption>
+                </figure>
+              </li>
+
+              <li>
+                <figure class="gallery-item" tabindex="0">
+                  <div class="gallery-item__media">
+                    <div class="gallery-item__img" aria-hidden="true"></div>
+                    <div class="gallery-item__overlay" aria-hidden="true"></div>
+                  </div>
+                  <figcaption class="gallery-item__caption sr-only"></figcaption>
+                </figure>
+              </li>
+
+              <li>
+                <figure class="gallery-item" tabindex="0">
+                  <div class="gallery-item__media">
+                    <div class="gallery-item__img" aria-hidden="true"></div>
+                    <div class="gallery-item__overlay" aria-hidden="true"></div>
+                  </div>
+                  <figcaption class="gallery-item__caption sr-only"></figcaption>
+                </figure>
+              </li>
+
+              <li>
+                <figure class="gallery-item" tabindex="0">
+                  <div class="gallery-item__media">
+                    <div class="gallery-item__img" aria-hidden="true"></div>
+                    <div class="gallery-item__overlay" aria-hidden="true"></div>
+                  </div>
+                  <figcaption class="gallery-item__caption sr-only"></figcaption>
+                </figure>
+              </li>
+
+              <li>
+                <figure class="gallery-item" tabindex="0">
+                  <div class="gallery-item__media">
+                    <div class="gallery-item__img" aria-hidden="true"></div>
+                    <div class="gallery-item__overlay" aria-hidden="true"></div>
+                  </div>
+                  <figcaption class="gallery-item__caption sr-only"></figcaption>
+                </figure>
+              </li>
+
+            </ul><!-- /.grid-gallery -->
+
+          </div><!-- /.section__inner--xl -->
+        </section><!-- /#gallery -->
+
+
+        <!-- ──────────────────────────────────────────
+             07. LOCATION
+             Venue map + venue detail panel.
+             Left (wider): Google Maps embed container.
+             Right: venue info-cards + transport note.
+             Desktop: 5fr / 4fr split (CSS).
              Reference: 07_RSVP_AND_MAP.png (07-A)
-        ──────────────────────────────────────── -->
-        <section id="location" aria-labelledby="location-heading"></section>
+        ─────────────────────────────────────────── -->
+        <section
+          id="location"
+          class="section"
+          aria-labelledby="location-heading"
+        >
+          <div class="section__inner--xl rhythm">
 
-        <!-- 08. RSVP ─────────────────────────────
-             Full RSVP form: name, guests, dietary,
-             accept / decline, success state.
+            <!-- Section heading group -->
+            <div class="section-title section-title--center">
+              <span class="section-title__eyebrow" aria-hidden="true"></span>
+              <h2 id="location-heading" class="section-title__heading"></h2>
+              <span class="section-title__script"></span>
+            </div>
+
+            <div class="decor-divider" role="presentation" aria-hidden="true">
+              <div class="decor-divider__gem"></div>
+            </div>
+
+            <!-- Two-panel: map | venue details -->
+            <div class="grid-map-rsvp">
+
+              <!-- Map panel.
+                   <iframe> (Google Maps) inserted Phase 6.
+                   title attribute on the iframe is required for AT.
+                   Wrapper div anchors responsive aspect-ratio. -->
+              <div class="location__map card-glass card-glass--static">
+                <!-- <iframe
+                  src=""
+                  title="Royal Garden Palace location on Google Maps"
+                  allowfullscreen
+                  loading="lazy"
+                  referrerpolicy="no-referrer-when-downgrade"
+                ></iframe> -->
+              </div>
+
+              <!-- Venue info panel -->
+              <div class="location__info flex-stack">
+
+                <!-- Venue name + address info-card -->
+                <div class="info-card" role="group" aria-label="Venue address">
+                  <div class="info-card__icon" aria-hidden="true"></div>
+                  <span class="info-card__label"></span>
+                  <span class="info-card__value"></span>
+                  <span class="info-card__sub"></span>
+                </div>
+
+                <!-- Parking info-card -->
+                <div class="info-card" role="group" aria-label="Parking information">
+                  <div class="info-card__icon" aria-hidden="true"></div>
+                  <span class="info-card__label"></span>
+                  <span class="info-card__value"></span>
+                </div>
+
+                <!-- Transportation info-card -->
+                <div class="info-card" role="group" aria-label="Transportation">
+                  <div class="info-card__icon" aria-hidden="true"></div>
+                  <span class="info-card__label"></span>
+                  <span class="info-card__value"></span>
+                </div>
+
+                <!-- Get Directions CTA -->
+                <a
+                  href=""
+                  class="btn btn-primary"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Open venue in Google Maps (opens in new tab)"
+                ></a>
+
+              </div><!-- /.location__info -->
+
+            </div><!-- /.grid-map-rsvp -->
+
+          </div><!-- /.section__inner--xl -->
+        </section><!-- /#location -->
+
+
+        <!-- ──────────────────────────────────────────
+             08. RSVP
+             Full RSVP form: accept / decline radio
+             cards, guest name, guest count, dietary
+             requirements, and message. On success the
+             form is replaced by a confirmation panel.
              Reference: 07_RSVP_AND_MAP.png (07-B)
-        ──────────────────────────────────────── -->
-        <section id="rsvp" aria-labelledby="rsvp-heading"></section>
+        ─────────────────────────────────────────── -->
+        <section
+          id="rsvp"
+          class="section section--dark"
+          aria-labelledby="rsvp-heading"
+        >
+          <div class="section__inner--md rhythm">
+
+            <!-- Section heading group -->
+            <div class="section-title section-title--center section-title--inverse">
+              <span class="section-title__eyebrow" aria-hidden="true"></span>
+              <h2 id="rsvp-heading" class="section-title__heading"></h2>
+              <span class="section-title__script"></span>
+            </div>
+
+            <div class="decor-divider decor-divider--emerald" role="presentation" aria-hidden="true">
+              <div class="decor-divider__gem"></div>
+            </div>
+
+            <!-- RSVP form card.
+                 card-glass--xl gives maximum glass depth.
+                 The form is the primary interaction surface.
+                 aria-describedby wires the form to any
+                 validation summary rendered by JS. -->
+            <div class="card-glass card-glass--xl">
+
+              <!-- ── RSVP Form (default visible state) ──── -->
+              <form
+                id="rsvp-form"
+                class="rsvp__form rhythm-sm"
+                method="POST"
+                action=""
+                aria-label="Wedding RSVP form"
+                aria-describedby="rsvp-validation-summary"
+                novalidate
+              >
+
+                <!-- Validation summary region.
+                     Populated by JS on submit error;
+                     aria-live="assertive" announces it immediately. -->
+                <div
+                  id="rsvp-validation-summary"
+                  class="sr-only"
+                  role="alert"
+                  aria-live="assertive"
+                  aria-atomic="true"
+                ></div>
+
+                <!-- Accept / Decline radio cards.
+                     role="group" + aria-labelledby pair the set.
+                     Visually-hidden <input type="radio"> inside each
+                     .rsvp-option keeps full keyboard + AT support. -->
+                <fieldset class="rsvp__attendance-choice">
+                  <legend class="sr-only">Will you attend?</legend>
+                  <div class="flex-pill-row">
+
+                    <!-- Accept option -->
+                    <label class="rsvp-option rsvp-option--accept">
+                      <input
+                        class="rsvp-option__radio"
+                        type="radio"
+                        name="attendance"
+                        value="accept"
+                        required
+                      />
+                      <span class="rsvp-option__icon" aria-hidden="true"></span>
+                      <span class="rsvp-option__label"></span>
+                    </label>
+
+                    <!-- Decline option -->
+                    <label class="rsvp-option rsvp-option--decline">
+                      <input
+                        class="rsvp-option__radio"
+                        type="radio"
+                        name="attendance"
+                        value="decline"
+                        required
+                      />
+                      <span class="rsvp-option__icon" aria-hidden="true"></span>
+                      <span class="rsvp-option__label"></span>
+                    </label>
+
+                  </div>
+                </fieldset><!-- /.rsvp__attendance-choice -->
+
+                <!-- Guest name field -->
+                <div class="flex-stack rsvp__field">
+                  <label for="rsvp-name" class="rsvp__label">
+                    <span class="sr-only">Full name (required)</span>
+                  </label>
+                  <input
+                    id="rsvp-name"
+                    class="rsvp__input"
+                    type="text"
+                    name="name"
+                    autocomplete="name"
+                    required
+                    aria-required="true"
+                    aria-describedby="rsvp-name-error"
+                  />
+                  <span id="rsvp-name-error" class="rsvp__error sr-only" role="alert"></span>
+                </div>
+
+                <!-- Number of guests field -->
+                <div class="flex-stack rsvp__field">
+                  <label for="rsvp-guests" class="rsvp__label">
+                    <span class="sr-only">Number of guests (required)</span>
+                  </label>
+                  <input
+                    id="rsvp-guests"
+                    class="rsvp__input"
+                    type="number"
+                    name="guests"
+                    min="1"
+                    max="10"
+                    required
+                    aria-required="true"
+                    aria-describedby="rsvp-guests-error"
+                  />
+                  <span id="rsvp-guests-error" class="rsvp__error sr-only" role="alert"></span>
+                </div>
+
+                <!-- Dietary requirements field -->
+                <div class="flex-stack rsvp__field">
+                  <label for="rsvp-dietary" class="rsvp__label">
+                    <span class="sr-only">Dietary requirements (optional)</span>
+                  </label>
+                  <textarea
+                    id="rsvp-dietary"
+                    class="rsvp__input rsvp__input--textarea"
+                    name="dietary"
+                    rows="3"
+                    autocomplete="off"
+                  ></textarea>
+                </div>
+
+                <!-- Message / wishes field -->
+                <div class="flex-stack rsvp__field">
+                  <label for="rsvp-message" class="rsvp__label">
+                    <span class="sr-only">Message to the couple (optional)</span>
+                  </label>
+                  <textarea
+                    id="rsvp-message"
+                    class="rsvp__input rsvp__input--textarea"
+                    name="message"
+                    rows="4"
+                    autocomplete="off"
+                  ></textarea>
+                </div>
+
+                <!-- Submit button -->
+                <div class="flex-center-col">
+                  <button
+                    type="submit"
+                    class="btn btn-primary btn--lg"
+                    aria-describedby="rsvp-validation-summary"
+                  ></button>
+                </div>
+
+              </form><!-- /#rsvp-form -->
+
+              <!-- ── RSVP Success state (hidden until JS shows it) ──
+                   JS swaps aria-hidden when form submits successfully.
+                   Contains confirmation icon, heading, and message. -->
+              <div
+                id="rsvp-success"
+                class="rsvp__success flex-center-col"
+                aria-hidden="true"
+                role="status"
+                aria-live="polite"
+              >
+                <div class="rsvp__success-icon" aria-hidden="true"></div>
+                <h3 class="rsvp__success-heading"></h3>
+                <!-- Confirmation message text filled Phase 6 -->
+              </div>
+
+            </div><!-- /.card-glass -->
+
+          </div><!-- /.section__inner--md -->
+        </section><!-- /#rsvp -->
+
 
       </main><!-- /#main-content -->
 
-      <!-- ─────────────────────────────────────────
+
+      <!-- ═══════════════════════════════════════════
            SITE FOOTER
-           role="contentinfo" — one per page.
-           Contains: social share, calendar links,
-           download PDF, copyright.
-      ──────────────────────────────────────────── -->
-      <footer id="site-footer" role="contentinfo"></footer>
+           role="contentinfo" — one per page (ARIA).
+           Contains: monogram, social share links,
+           save-to-calendar links, copyright notice.
+      ════════════════════════════════════════════ -->
+      <footer id="site-footer" role="contentinfo">
+        <div class="section__inner rhythm">
+
+          <!-- Footer monogram / brand mark.
+               Decorative; aria-hidden removes from AT. -->
+          <div class="footer__monogram" aria-hidden="true"></div>
+
+          <!-- Decorative ornament divider -->
+          <div class="decor-divider decor-divider--triple" role="presentation" aria-hidden="true">
+            <div class="decor-divider__gem">
+              <span aria-hidden="true"></span>
+            </div>
+          </div>
+
+          <!-- Social share links.
+               aria-label on each link names the platform and action.
+               .social-icon--{platform} drives the hover tint in CSS. -->
+          <nav aria-label="Share this invitation">
+            <ul class="flex-icon-row" role="list">
+              <li>
+                <a
+                  href=""
+                  class="social-icon social-icon--whatsapp"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Share on WhatsApp (opens in new tab)"
+                >
+                  <!-- Icon injected by JS -->
+                </a>
+              </li>
+              <li>
+                <a
+                  href=""
+                  class="social-icon social-icon--facebook"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Share on Facebook (opens in new tab)"
+                >
+                </a>
+              </li>
+              <li>
+                <a
+                  href=""
+                  class="social-icon social-icon--instagram"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Share on Instagram (opens in new tab)"
+                >
+                </a>
+              </li>
+              <li>
+                <a
+                  href=""
+                  class="social-icon social-icon--messenger"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Share via Messenger (opens in new tab)"
+                >
+                </a>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  class="social-icon social-icon--copy"
+                  aria-label="Copy invitation link to clipboard"
+                  data-copy-link
+                >
+                </button>
+              </li>
+            </ul>
+          </nav><!-- /aria-label="Share this invitation" -->
+
+          <!-- Save to calendar links.
+               Each link opens the respective calendar
+               provider to pre-fill the wedding event. -->
+          <nav aria-label="Save to calendar">
+            <ul class="flex-pill-row" role="list">
+              <li>
+                <a
+                  href=""
+                  class="btn btn-ghost btn--sm"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Add to Google Calendar (opens in new tab)"
+                ></a>
+              </li>
+              <li>
+                <a
+                  href=""
+                  class="btn btn-ghost btn--sm"
+                  download
+                  aria-label="Download .ics calendar file"
+                ></a>
+              </li>
+            </ul>
+          </nav><!-- /aria-label="Save to calendar" -->
+
+          <!-- Copyright / legal notice.
+               <small> carries the semantic weight of fine print. -->
+          <small class="footer__copyright"></small>
+
+        </div><!-- /.section__inner -->
+      </footer><!-- /#site-footer -->
+
 
     </div><!-- /#app -->
 
+
     <!-- ═══════════════════════════════════════════
          MUSIC PLAYER
-         Fixed position; accessible via button.
-         Audio preload="none" — user-gesture only.
+         Fixed position — outside #app so it is
+         never clipped by overflow:hidden.
+         role="complementary" + aria-label exposes
+         it as a landmark to AT users.
+         .btn-music is toggled by JS: adds .is-playing,
+         flips aria-pressed, and plays/pauses the audio.
     ════════════════════════════════════════════ -->
     <div id="music-player" role="complementary" aria-label="Background music player">
+
+      <!-- Hidden audio element.
+           preload="none" — never loads until user gesture.
+           loop keeps the track cycling. -->
       <audio id="music-audio" loop preload="none">
         <source src="assets/audio/music.mp3" type="audio/mpeg" />
       </audio>
-    </div>
+
+      <!-- Toggle button.
+           aria-pressed reflects playback state (JS updates it).
+           aria-controls wires the button to the audio element. -->
+      <button
+        type="button"
+        class="btn-music"
+        aria-label="Play background music"
+        aria-pressed="false"
+        aria-controls="music-audio"
+      >
+        <span class="btn-music__icon" aria-hidden="true"></span>
+        <span class="btn-music__ring" aria-hidden="true"></span>
+      </button>
+
+    </div><!-- /#music-player -->
+
+
+    <!-- ═══════════════════════════════════════════
+         GLOBAL MODAL SHELL
+         Shared panel for: photo lightbox, gallery
+         full-screen, and any overlay dialogs.
+         aria-hidden="true" by default; JS sets it
+         to "false" and manages focus-trap on open.
+         aria-modal prevents background interaction.
+    ════════════════════════════════════════════ -->
+    <div
+      id="global-modal"
+      class="modal"
+      role="dialog"
+      aria-modal="true"
+      aria-hidden="true"
+      aria-labelledby="modal-title"
+    >
+      <div class="modal__backdrop" data-modal-close></div>
+      <div class="modal__panel">
+
+        <!-- Close button — always first focusable element in panel -->
+        <button
+          type="button"
+          class="modal__close"
+          data-modal-close
+          aria-label="Close"
+        ></button>
+
+        <!-- Title — referenced by aria-labelledby above.
+             Content injected by JS depending on modal trigger. -->
+        <h2 id="modal-title" class="modal__title"></h2>
+
+        <!-- Body — scrollable; content injected by JS -->
+        <div class="modal__body"></div>
+
+      </div><!-- /.modal__panel -->
+    </div><!-- /#global-modal -->
+
+
+    <!-- ═══════════════════════════════════════════
+         TOAST NOTIFICATION REGION
+         Fixed stacking area for success / error /
+         info toasts. role="log" + aria-live="polite"
+         announces new toasts without interrupting
+         current AT reading flow.
+         JS appends .toast elements into this region.
+    ════════════════════════════════════════════ -->
+    <div
+      id="toast-region"
+      class="toast-region"
+      role="log"
+      aria-live="polite"
+      aria-label="Notifications"
+      aria-atomic="false"
+    ></div>
+
 
     <script src="assets/js/app.js"></script>
   </body>
