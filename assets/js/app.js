@@ -49,12 +49,19 @@ const clamp = (n, lo, hi) => Math.min(Math.max(n, lo), hi);
 
 function initLoader() {
   const loader = $('#loader');
-  if (!loader) return;
+  if (!loader) {
+    // No loader element — mark page as loaded so hero entrance animations fire
+    document.body.classList.add('is-loaded');
+    return;
+  }
 
   const dismiss = () => {
     loader.classList.add('loader--hidden');
-    // Remove from DOM after transition (≈ 600 ms, see style.css)
-    const cleanup = () => loader.isConnected && loader.remove();
+    // Remove from DOM after transition, then signal ready for hero entrance
+    const cleanup = () => {
+      if (loader.isConnected) loader.remove();
+      document.body.classList.add('is-loaded');
+    };
     loader.addEventListener('transitionend', cleanup, { once: true });
     setTimeout(cleanup, 800); // failsafe if transitionend never fires
   };
@@ -273,6 +280,25 @@ function initCountdown() {
     seconds: $('[data-countdown="seconds"]', container),
   };
 
+  // Trigger .countdown-unit--flip on the parent card when a digit changes.
+  // components.css already defines: .countdown-unit--flip .countdown-unit__number
+  // { animation: countFlip var(--duration-fast) … }
+  const flip = el => {
+    if (REDUCED_MOTION || !el) return;
+    const unit = el.closest('.countdown-unit');
+    if (!unit) return;
+    unit.classList.remove('countdown-unit--flip');
+    void unit.offsetWidth; // force reflow so animation restarts each tick
+    unit.classList.add('countdown-unit--flip');
+  };
+
+  // Update text content and flip only when the displayed value actually changes
+  const updateUnit = (el, text) => {
+    if (!el || el.textContent === text) return;
+    el.textContent = text;
+    flip(el);
+  };
+
   const tick = () => {
     const diff     = TARGET_MS - Date.now();
     const totalSec = Math.max(0, Math.floor(diff / 1000));
@@ -281,10 +307,10 @@ function initCountdown() {
     const m        = Math.floor((totalSec % 3600) / 60);
     const s        = totalSec % 60;
 
-    if (units.days)    units.days.textContent    = pad(d);
-    if (units.hours)   units.hours.textContent   = pad(h);
-    if (units.minutes) units.minutes.textContent = pad(m);
-    if (units.seconds) units.seconds.textContent = pad(s);
+    updateUnit(units.days,    pad(d));
+    updateUnit(units.hours,   pad(h));
+    updateUnit(units.minutes, pad(m));
+    updateUnit(units.seconds, pad(s));
   };
 
   tick(); // paint immediately on load
