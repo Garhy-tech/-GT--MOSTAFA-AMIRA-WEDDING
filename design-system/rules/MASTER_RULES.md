@@ -61,4 +61,3 @@ Read Images In Order
 ↓
 
 09_FINAL_INSPIRATION
-

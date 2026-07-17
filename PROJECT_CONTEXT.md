@@ -95,4 +95,3 @@ Never invent colors.
 Never ignore reference images.
 
 Always preserve the visual identity.
-

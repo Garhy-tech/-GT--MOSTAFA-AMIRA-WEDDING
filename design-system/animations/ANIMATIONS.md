@@ -11,4 +11,3 @@ Floating Petals
 Luxury Motion
 
 No aggressive animation
-

@@ -1,4 +1,5 @@
 # PROJECT_STATE.md
+
 ## Official Handoff Document — Mostafa & Amira Wedding Invitation
 
 > **Generated:** 2026-07-17  
@@ -9,16 +10,16 @@
 
 ## 1. Completed Phases
 
-| # | Phase | Commit | Status |
-|---|-------|--------|--------|
-| 1 | Audit | *(no commit — analysis only)* | ✅ Done |
-| 2 | Project Structure Sync | `chore(project): synchronize project structure` | ✅ Done |
-| 3 | Design Foundation | `chore(styles): initialize design foundation` | ✅ Done |
-| 4 | Global Layout System | `chore(layout): initialize global layout system` | ✅ Done |
-| 5a | Reusable Component Library | `feat(ui): implement reusable component library` | ✅ Done |
-| 5b | Page Composition Framework | `feat(layout): assemble page composition` | ✅ Done |
-| 6 | Visual Implementation | `feat(ui): implement complete visual design` | ✅ Done |
-| — | Infra / Workflow | `chore(infra): configure static server workflow + hide loader pre-JS` | ✅ Done |
+| #   | Phase                      | Commit                                                                | Status  |
+| --- | -------------------------- | --------------------------------------------------------------------- | ------- |
+| 1   | Audit                      | _(no commit — analysis only)_                                         | ✅ Done |
+| 2   | Project Structure Sync     | `chore(project): synchronize project structure`                       | ✅ Done |
+| 3   | Design Foundation          | `chore(styles): initialize design foundation`                         | ✅ Done |
+| 4   | Global Layout System       | `chore(layout): initialize global layout system`                      | ✅ Done |
+| 5a  | Reusable Component Library | `feat(ui): implement reusable component library`                      | ✅ Done |
+| 5b  | Page Composition Framework | `feat(layout): assemble page composition`                             | ✅ Done |
+| 6   | Visual Implementation      | `feat(ui): implement complete visual design`                          | ✅ Done |
+| —   | Infra / Workflow           | `chore(infra): configure static server workflow + hide loader pre-JS` | ✅ Done |
 
 **Phase 7 (JavaScript interactivity) has NOT been started.**
 
@@ -72,23 +73,24 @@ Do not modify this file. It contains every token and layout primitive the entire
 
 **Custom Properties (80+ tokens):**
 
-| Group | Examples |
-|-------|---------|
-| Colors | `--color-blush-100…500`, `--color-emerald-100…600`, `--color-rose-gold-100…500`, `--color-white`, `--color-black` |
-| Semantic colors | `--color-bg-primary`, `--color-text-primary`, `--color-accent-primary`, `--color-accent-secondary` |
-| Typography | `--font-heading` (Cinzel), `--font-body` (Cairo), `--font-script` (Great Vibes), `--font-accent` (Playfair Display) |
-| Type scale | `--text-xs` … `--text-display-xl` (fluid clamp values) |
-| Spacing | `--space-1` (4 px) … `--space-24` (96 px), 4 pt grid |
-| Radius | `--radius-sm` … `--radius-full` |
-| Shadow | `--shadow-sm` … `--shadow-dramatic`, `--shadow-glow-*` |
-| Glass | `--glass-bg`, `--glass-border`, `--glass-blur`, `--glass-blur-heavy` |
-| Motion | `--duration-fast` … `--duration-cinematic`, `--ease-smooth`, `--ease-spring`, `--ease-dramatic` |
-| Z-index | `--z-base` … `--z-overlay` |
+| Group           | Examples                                                                                                            |
+| --------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Colors          | `--color-blush-100…500`, `--color-emerald-100…600`, `--color-rose-gold-100…500`, `--color-white`, `--color-black`   |
+| Semantic colors | `--color-bg-primary`, `--color-text-primary`, `--color-accent-primary`, `--color-accent-secondary`                  |
+| Typography      | `--font-heading` (Cinzel), `--font-body` (Cairo), `--font-script` (Great Vibes), `--font-accent` (Playfair Display) |
+| Type scale      | `--text-xs` … `--text-display-xl` (fluid clamp values)                                                              |
+| Spacing         | `--space-1` (4 px) … `--space-24` (96 px), 4 pt grid                                                                |
+| Radius          | `--radius-sm` … `--radius-full`                                                                                     |
+| Shadow          | `--shadow-sm` … `--shadow-dramatic`, `--shadow-glow-*`                                                              |
+| Glass           | `--glass-bg`, `--glass-border`, `--glass-blur`, `--glass-blur-heavy`                                                |
+| Motion          | `--duration-fast` … `--duration-cinematic`, `--ease-smooth`, `--ease-spring`, `--ease-dramatic`                     |
+| Z-index         | `--z-base` … `--z-overlay`                                                                                          |
 
 **Animation Keyframes (13):**
 `fadeIn`, `fadeInUp`, `fadeInDown`, `slideInLeft`, `slideInRight`, `float`, `floatSlow`, `shimmer`, `shimmerGold`, `crystalRotate`, `pulseGlow`, `particleFade`, `loaderSpin`
 
 **Utility Classes:**
+
 - Typography: `.font-heading`, `.font-body`, `.font-script`, `.font-accent`, `.text-xs` … `.text-display-xl`, `.text-center`, `.text-left`, `.text-right`
 - Color: `.text-blush`, `.text-emerald`, `.text-rose-gold`, `.text-white`, `.bg-blush`, `.bg-emerald`, `.bg-white`
 - Spacing: `.mt-{1-24}`, `.mb-{1-24}`, `.pt-{1-24}`, `.pb-{1-24}`, `.px-{1-24}`, `.py-{1-24}`
@@ -97,6 +99,7 @@ Do not modify this file. It contains every token and layout primitive the entire
 - Responsive prefixes: `md:`, `lg:`, `xl:` (640 px / 1024 px / 1280 px)
 
 **Layout System (appended to style.css):**
+
 - Skip-link, loader shell (`#loader`), `#app`, landmark shells
 - `.section` base + 5 variants: `.section--hero`, `.section--dark`, `.section--glass`, `.section--crystal`, `.section--editorial`
 - `.section__inner` width modifiers: `--narrow`, `--wide`, `--full`
@@ -107,26 +110,26 @@ Do not modify this file. It contains every token and layout primitive the entire
 
 **20 reusable components (modify only if essential):**
 
-| Component | Class | Notes |
-|-----------|-------|-------|
-| Buttons | `.btn` + `--primary`, `--secondary`, `--ghost`, `--icon` | Emerald primary, blush secondary |
-| Glass card | `.card-glass` | Backdrop-filter blur |
-| Crystal card | `.card-crystal` | Frosted glassmorphism |
-| Section title | `.section-title` + `__eyebrow`, `__heading`, `__subheading`, `__script` | With decorative flanking lines |
-| Decorative divider | `.decor-divider` | Rose-gold ornamental separator |
-| Badge | `.badge` | Pill-shaped label |
-| Countdown unit | `.countdown-unit` + `__number`, `__label`, `__sep` | Single digit block |
-| Info card | `.info-card` + `__icon`, `__label`, `__value`, `__sub` | Event details card |
-| Timeline | `.timeline` + `.timeline-item` + `__dot`, `__date`, `__title`, `__body` | Horizontal story timeline |
-| Quote block | `.quote-block` + `__text`, `__author` | Styled love quote |
-| Gallery item | `.gallery-item` + `__media`, `__img`, `__overlay`, `__caption` | Hover-reveal caption |
-| RSVP option | `.rsvp-option` + `__input`, `__label` | Accept / Decline radio |
-| Social icon | `.social-icon` | Share link button |
-| Scroll indicator | `.scroll-indicator` | Animated bounce arrow |
-| Music button | `.btn-music` + `__icon`, `__ring` | Floating circular toggle |
-| Modal | `.modal` + `__backdrop`, `__panel`, `__header`, `__title`, `__close`, `__body` | Dialog overlay |
-| Toast | `.toast` + `--success`, `--error`, `--info` | Notification strip |
-| Toast region | `.toast-region` | ARIA live container |
+| Component          | Class                                                                          | Notes                            |
+| ------------------ | ------------------------------------------------------------------------------ | -------------------------------- |
+| Buttons            | `.btn` + `--primary`, `--secondary`, `--ghost`, `--icon`                       | Emerald primary, blush secondary |
+| Glass card         | `.card-glass`                                                                  | Backdrop-filter blur             |
+| Crystal card       | `.card-crystal`                                                                | Frosted glassmorphism            |
+| Section title      | `.section-title` + `__eyebrow`, `__heading`, `__subheading`, `__script`        | With decorative flanking lines   |
+| Decorative divider | `.decor-divider`                                                               | Rose-gold ornamental separator   |
+| Badge              | `.badge`                                                                       | Pill-shaped label                |
+| Countdown unit     | `.countdown-unit` + `__number`, `__label`, `__sep`                             | Single digit block               |
+| Info card          | `.info-card` + `__icon`, `__label`, `__value`, `__sub`                         | Event details card               |
+| Timeline           | `.timeline` + `.timeline-item` + `__dot`, `__date`, `__title`, `__body`        | Horizontal story timeline        |
+| Quote block        | `.quote-block` + `__text`, `__author`                                          | Styled love quote                |
+| Gallery item       | `.gallery-item` + `__media`, `__img`, `__overlay`, `__caption`                 | Hover-reveal caption             |
+| RSVP option        | `.rsvp-option` + `__input`, `__label`                                          | Accept / Decline radio           |
+| Social icon        | `.social-icon`                                                                 | Share link button                |
+| Scroll indicator   | `.scroll-indicator`                                                            | Animated bounce arrow            |
+| Music button       | `.btn-music` + `__icon`, `__ring`                                              | Floating circular toggle         |
+| Modal              | `.modal` + `__backdrop`, `__panel`, `__header`, `__title`, `__close`, `__body` | Dialog overlay                   |
+| Toast              | `.toast` + `--success`, `--error`, `--info`                                    | Notification strip               |
+| Toast region       | `.toast-region`                                                                | ARIA live container              |
 
 ### 4c. Page-level `<style>` block inside `index.html`
 
@@ -150,19 +153,19 @@ Visual overrides and page-specific rules that could not be expressed purely with
 
 All 20 component classes from `components.css` are instantiated in `index.html`. Summary of live usage:
 
-| Section | Components used |
-|---------|----------------|
-| Header | Glass header, nav links, `.btn--primary` (RSVP CTA) |
-| Hero | `.section--hero`, `.hero__arch` (crystal frame), `.section-title`, monogram, `.scroll-indicator`, `.btn--primary` |
-| Countdown | `.section--dark`, `.section-title`, `.countdown-unit` ×4, diamond separators |
-| Our Story | `.section--crystal`, `.section-title`, `.timeline` with 4 `.timeline-item` nodes, `.quote-block` |
-| The Event | `.section`, `.section-title`, `.info-card` ×4 (date, time, venue, dress code), `.transport-card` ×3 |
-| The Couple | `.section--glass`, `.section-title`, couple portrait placeholders, `.badge` tags |
-| Gallery | `.section`, `.section-title`, `.gallery-item` ×6 (gradient placeholders), `.btn--ghost` (View All) |
-| Location | `.section--crystal`, `.section-title`, `.location__map` iframe placeholder, `.btn--secondary` (Directions) |
-| RSVP | `.section--dark`, `.section-title`, `.rsvp-option` ×2, form fields, `.btn--primary` submit |
-| Footer | Monogram, copyright, `.social-icon` ×5 |
-| Overlays | `#global-modal` (share sheet), `#toast-region`, `#music-player` |
+| Section    | Components used                                                                                                   |
+| ---------- | ----------------------------------------------------------------------------------------------------------------- |
+| Header     | Glass header, nav links, `.btn--primary` (RSVP CTA)                                                               |
+| Hero       | `.section--hero`, `.hero__arch` (crystal frame), `.section-title`, monogram, `.scroll-indicator`, `.btn--primary` |
+| Countdown  | `.section--dark`, `.section-title`, `.countdown-unit` ×4, diamond separators                                      |
+| Our Story  | `.section--crystal`, `.section-title`, `.timeline` with 4 `.timeline-item` nodes, `.quote-block`                  |
+| The Event  | `.section`, `.section-title`, `.info-card` ×4 (date, time, venue, dress code), `.transport-card` ×3               |
+| The Couple | `.section--glass`, `.section-title`, couple portrait placeholders, `.badge` tags                                  |
+| Gallery    | `.section`, `.section-title`, `.gallery-item` ×6 (gradient placeholders), `.btn--ghost` (View All)                |
+| Location   | `.section--crystal`, `.section-title`, `.location__map` iframe placeholder, `.btn--secondary` (Directions)        |
+| RSVP       | `.section--dark`, `.section-title`, `.rsvp-option` ×2, form fields, `.btn--primary` submit                        |
+| Footer     | Monogram, copyright, `.social-icon` ×5                                                                            |
+| Overlays   | `#global-modal` (share sheet), `#toast-region`, `#music-player`                                                   |
 
 ---
 
@@ -240,6 +243,7 @@ All 20 component classes from `components.css` are instantiated in `index.html`.
 **Inline SVG icons present throughout:** calendar, clock, location pin, star, home, car, plane, parking, heart (accept), × (decline), send arrow, lock, map-pin, WhatsApp, Facebook, Instagram, X, Messenger, copy-link, music note, close ×.
 
 **JS hooks wired (awaiting Phase 7):**
+
 - `data-countdown="days|hours|minutes|seconds"` — countdown number targets
 - `data-modal-close` — modal close triggers (button + backdrop)
 - `data-copy-link` — clipboard copy button
@@ -258,21 +262,21 @@ The file is linked in `<head>` via `<script src="assets/js/app.js" defer></scrip
 
 **All functionality that requires JS is currently non-functional:**
 
-| Feature | Status |
-|---------|--------|
-| Page loader dismiss | ❌ Loader hidden via CSS override (see §4c) |
-| Header `.is-scrolled` on scroll | ❌ |
-| Mobile nav toggle | ❌ |
-| Countdown timer | ❌ Displays `--` placeholder |
-| Scroll-reveal animations | ❌ |
-| Music player play/pause | ❌ |
-| Share modal open/close | ❌ |
-| Toast notifications | ❌ |
-| Clipboard copy | ❌ |
-| Gallery lightbox | ❌ |
-| RSVP form submission | ❌ |
-| Smooth scroll (nav links) | ❌ |
-| Canvas particle effect | ❌ |
+| Feature                         | Status                                      |
+| ------------------------------- | ------------------------------------------- |
+| Page loader dismiss             | ❌ Loader hidden via CSS override (see §4c) |
+| Header `.is-scrolled` on scroll | ❌                                          |
+| Mobile nav toggle               | ❌                                          |
+| Countdown timer                 | ❌ Displays `--` placeholder                |
+| Scroll-reveal animations        | ❌                                          |
+| Music player play/pause         | ❌                                          |
+| Share modal open/close          | ❌                                          |
+| Toast notifications             | ❌                                          |
+| Clipboard copy                  | ❌                                          |
+| Gallery lightbox                | ❌                                          |
+| RSVP form submission            | ❌                                          |
+| Smooth scroll (nav links)       | ❌                                          |
+| Canvas particle effect          | ❌                                          |
 
 **Phase 7 must implement all of the above in `assets/js/app.js` only.**
 
@@ -320,19 +324,19 @@ Configure Replit deployment or export static files to a CDN/hosting provider.
 
 ## 9. Known Limitations
 
-| # | Issue | Severity | Notes |
-|---|-------|----------|-------|
-| 1 | `assets/js/app.js` is empty | 🔴 Critical | All interactivity broken |
-| 2 | `assets/audio/music.mp3` missing | 🟡 Medium | `<audio>` element present, src 404 |
-| 3 | Google Maps iframe commented out | 🟡 Medium | Needs embed URL from client |
-| 4 | RSVP form `action=""` is empty | 🟡 Medium | Form submits to itself; needs endpoint |
-| 5 | Gallery uses gradient placeholders | 🟡 Medium | No real photos yet |
-| 6 | Couple section uses gradient placeholders | 🟡 Medium | No real photos yet |
-| 7 | Loader hidden via CSS, not JS | 🟠 Low | CSS override in page `<style>` block; must be corrected in Phase 7 |
-| 8 | One inline `style` attribute | 🟢 Negligible | Inside `#rsvp-success > p`; minor cleanup |
-| 9 | Monogram uses emoji + Cinzel | 🟢 Negligible | Functional but not the ideal SVG mark |
-| 10 | Canvas particles (`#canvas-particles`) | 🟢 Negligible | Placeholder div; needs JS particle engine |
-| 11 | `lang="ar-EG" dir="rtl"` | 🟠 Low | Content is Arabic-named but text is mixed Arabic/English; verify RTL layout with real content |
+| #   | Issue                                     | Severity      | Notes                                                                                         |
+| --- | ----------------------------------------- | ------------- | --------------------------------------------------------------------------------------------- |
+| 1   | `assets/js/app.js` is empty               | 🔴 Critical   | All interactivity broken                                                                      |
+| 2   | `assets/audio/music.mp3` missing          | 🟡 Medium     | `<audio>` element present, src 404                                                            |
+| 3   | Google Maps iframe commented out          | 🟡 Medium     | Needs embed URL from client                                                                   |
+| 4   | RSVP form `action=""` is empty            | 🟡 Medium     | Form submits to itself; needs endpoint                                                        |
+| 5   | Gallery uses gradient placeholders        | 🟡 Medium     | No real photos yet                                                                            |
+| 6   | Couple section uses gradient placeholders | 🟡 Medium     | No real photos yet                                                                            |
+| 7   | Loader hidden via CSS, not JS             | 🟠 Low        | CSS override in page `<style>` block; must be corrected in Phase 7                            |
+| 8   | One inline `style` attribute              | 🟢 Negligible | Inside `#rsvp-success > p`; minor cleanup                                                     |
+| 9   | Monogram uses emoji + Cinzel              | 🟢 Negligible | Functional but not the ideal SVG mark                                                         |
+| 10  | Canvas particles (`#canvas-particles`)    | 🟢 Negligible | Placeholder div; needs JS particle engine                                                     |
+| 11  | `lang="ar-EG" dir="rtl"`                  | 🟠 Low        | Content is Arabic-named but text is mixed Arabic/English; verify RTL layout with real content |
 
 ---
 
@@ -371,6 +375,7 @@ All commits are on `main`. No branches. No tags.
 ## 12. Important Implementation Notes
 
 ### Design System Rules (Non-negotiable)
+
 - **Allowed colors:** Blush Pink `#FAD6E3`, Emerald Green `#0D6857`, Rose Gold `#E7B7A1`, Crystal White `#FFFFFF` — always via CSS variables, never hardcoded hex.
 - **Forbidden colors:** Beige, brown, dark yellow, dirty gold, any color not in the palette.
 - **M always has a luxury bow tie. A always has an elegant feminine crown.** (Currently: emoji implementation; future: SVG.)
@@ -379,6 +384,7 @@ All commits are on `main`. No branches. No tags.
 - **Countdown target:** `2026-07-31T17:00:00Z` (Cairo UTC+2 = 19:00 local).
 
 ### CSS Architecture Rules
+
 - `style.css` is immutable — no modifications.
 - `components.css` is near-immutable — only change if a bug exists in a component definition itself.
 - New visual rules go in the page-level `<style>` block in `index.html`.
@@ -386,6 +392,7 @@ All commits are on `main`. No branches. No tags.
 - Never hardcode a color value anywhere in `index.html`; always use `var(--color-*)`.
 
 ### JS Architecture Rules
+
 - All JavaScript goes in `assets/js/app.js` only.
 - No external JS libraries.
 - No new `.js` files.
@@ -393,7 +400,9 @@ All commits are on `main`. No branches. No tags.
 - Phase 7 JS must remove the CSS loader override (the `opacity: 0` block in the page `<style>`) and replace it with proper JS-driven loader dismissal.
 
 ### Loader Correction Required in Phase 7
+
 The page `<style>` block currently contains:
+
 ```css
 #loader {
   opacity: 0;
@@ -401,12 +410,15 @@ The page `<style>` block currently contains:
   pointer-events: none;
 }
 ```
+
 This is a temporary CSS-only fix so the page renders visibly without JS. **Phase 7 must:**
+
 1. Remove this CSS block from `index.html`.
 2. In `app.js`, listen for `window.load`, then add `.loader--hidden` to `#loader`.
 3. `style.css` already defines the transition for `.loader--hidden`.
 
 ### Accessibility Baselines Already Implemented
+
 - Skip-link to `#main-content`
 - All 8 sections have `aria-labelledby` wired to their `<h2>` IDs
 - Single `<h1>` in hero; consistent heading hierarchy throughout
@@ -418,12 +430,14 @@ This is a temporary CSS-only fix so the page renders visibly without JS. **Phase
 - `.gallery-item` items have `tabindex="0"` for keyboard access
 
 ### Server / Workflow
+
 - Workflow: **"Start application"** — inline Node.js HTTP server on port 5000
 - Command: `node -e "const http=require('http')…"` (see `.replit` workflow config)
 - No `package.json`, no `node_modules`, no npm scripts
 - To restart: use WorkflowsRestart tool or Replit workflow panel
 
 ### Files That Must Never Be Modified
+
 - `design-system/` — all files (reference only)
 - `assets/css/style.css` — locked design foundation
 - `README.md` — project readme

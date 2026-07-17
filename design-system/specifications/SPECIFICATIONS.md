@@ -15,4 +15,3 @@ SEO Friendly
 Glassmorphism
 
 Luxury Editorial Layout
-

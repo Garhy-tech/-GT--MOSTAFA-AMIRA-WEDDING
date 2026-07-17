@@ -1,0 +1,46 @@
+warning: in the working copy of 'FINAL_RELEASE.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'PROJECT_CONTEXT.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'PROJECT_STATE.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'assets/css/components.css', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'assets/css/style.css', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'assets/js/app.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'design-system/00_PROJECT_RULES.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'design-system/ANIMATIONS.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'design-system/COLORS.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'design-system/COMPONENTS.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'design-system/DESIGN_RULES.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'design-system/TYPOGRAPHY.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'design-system/animations/ANIMATIONS.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'design-system/colors/COLORS.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'design-system/components/COMPONENTS.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'design-system/prompts/REPLIT_MASTER_PROMPT.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'design-system/rules/MASTER_RULES.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'design-system/specifications/SPECIFICATIONS.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'design-system/typography/TYPOGRAPHY.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'index.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'replit.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'site.webmanifest', LF will be replaced by CRLF the next time Git touches it
+ FINAL_RELEASE.md                               |  241 [32m+[m[31m--[m
+ PROJECT_CONTEXT.md                             |    1 [31m-[m
+ PROJECT_STATE.md                               |  180 [32m++[m[31m-[m
+ README.md                                      |    2 [32m+[m[31m-[m
+ assets/css/components.css                      | 1334 [32m+++++++[m[31m--------[m
+ assets/css/style.css                           | 1757 [32m+++++++++++++[m[31m-------[m
+ assets/js/app.js                               |  479 [32m+++[m[31m---[m
+ design-system/00_PROJECT_RULES.md              |    3 [32m+[m[31m-[m
+ design-system/ANIMATIONS.md                    |    2 [32m+[m[31m-[m
+ design-system/COLORS.md                        |    2 [32m+[m[31m-[m
+ design-system/COMPONENTS.md                    |    2 [32m+[m[31m-[m
+ design-system/DESIGN_RULES.md                  |    2 [32m+[m[31m-[m
+ design-system/TYPOGRAPHY.md                    |    2 [32m+[m[31m-[m
+ design-system/animations/ANIMATIONS.md         |    1 [31m-[m
+ design-system/colors/COLORS.md                 |    2 [32m+[m[31m-[m
+ design-system/components/COMPONENTS.md         |    1 [31m-[m
+ design-system/prompts/REPLIT_MASTER_PROMPT.md  |    1 [31m-[m
+ design-system/rules/MASTER_RULES.md            |    1 [31m-[m
+ design-system/specifications/SPECIFICATIONS.md |    1 [31m-[m
+ design-system/typography/TYPOGRAPHY.md         |    1 [31m-[m
+ index.html                                     | 2069 [32m+++++++++++++++[m[31m---------[m
+ replit.md                                      |    6 [32m+[m
+ 22 files changed, 3680 insertions(+), 2410 deletions(-)
