@@ -774,13 +774,8 @@
         animation:    loaderSpin var(--duration-slow) linear infinite;
       }
 
-      /* Hide loader immediately — no JS available in Phase 6.
-         JS Phase will add .loader--shown to make it visible on load. */
-      #loader {
-        opacity:        0;
-        visibility:     hidden;
-        pointer-events: none;
-      }
+      /* Loader is shown by default (style.css: opacity:1).
+         JS adds .loader--hidden on window.load to fade it out. */
 
       /* ─────────────────────────────────────────
          RESPONSIVE — MOBILE (< 768px)
@@ -856,6 +851,164 @@
         #site-nav ul {
           display: flex !important;
         }
+      }
+
+      /* ─────────────────────────────────────────
+         JS INTEGRATION — Phase 7
+         Classes toggled by app.js. Kept here so
+         they live alongside the page-level tokens
+         they reference.
+      ──────────────────────────────────────────── */
+
+      /* Utility: display-none swap (RSVP form ↔ success) */
+      .is-hidden {
+        display: none !important;
+      }
+
+      /* Active navigation link */
+      #site-nav a.is-active {
+        color:       var(--color-emerald-500);
+        font-weight: 700;
+      }
+
+      /* Scroll reveal — elements start invisible and slide up */
+      [data-reveal] {
+        opacity:    0;
+        transform:  translateY(24px);
+        transition: opacity 0.65s var(--ease-smooth),
+                    transform 0.65s var(--ease-smooth);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        [data-reveal] {
+          transform:         none;
+          transition-duration: 0.01ms;
+        }
+      }
+      [data-reveal].is-revealed {
+        opacity:   1;
+        transform: translateY(0);
+      }
+
+      /* Prevent body scroll when modal / lightbox is open */
+      body.modal-open {
+        overflow: hidden;
+      }
+
+      /* ── Gallery Lightbox (DOM created by app.js) ─ */
+      #lightbox {
+        position:        fixed;
+        inset:           0;
+        z-index:         var(--z-overlay, 45);
+        display:         flex;
+        align-items:     center;
+        justify-content: center;
+        opacity:         0;
+        visibility:      hidden;
+        pointer-events:  none;
+        transition:      opacity 0.3s var(--ease-smooth),
+                         visibility 0.3s var(--ease-smooth);
+      }
+      #lightbox.is-open {
+        opacity:        1;
+        visibility:     visible;
+        pointer-events: auto;
+      }
+      .lightbox__backdrop {
+        position:   absolute;
+        inset:      0;
+        background: rgba(5, 5, 10, 0.92);
+        cursor:     pointer;
+      }
+      .lightbox__stage {
+        position:        relative;
+        z-index:         1;
+        display:         flex;
+        flex-direction:  column;
+        align-items:     center;
+        gap:             var(--space-4);
+        max-width:       min(90vw, 960px);
+        max-height:      90vh;
+      }
+      .lightbox__media {
+        display:         flex;
+        align-items:     center;
+        justify-content: center;
+        max-height:      72vh;
+        max-width:       100%;
+      }
+      .lightbox__img {
+        max-width:     100%;
+        max-height:    72vh;
+        object-fit:    contain;
+        border-radius: var(--radius-lg);
+        box-shadow:    var(--shadow-dramatic);
+      }
+      .lightbox__placeholder {
+        width:         560px;
+        height:        400px;
+        max-width:     80vw;
+        max-height:    60vh;
+        border-radius: var(--radius-lg);
+        box-shadow:    var(--shadow-dramatic);
+        background:    var(--gradient-blush);
+      }
+      /* Mirror the per-item gradients from the gallery section */
+      .lightbox__placeholder--1 { background: linear-gradient(135deg, var(--color-blush-300)     0%, var(--color-blush-500)      100%); }
+      .lightbox__placeholder--2 { background: linear-gradient(135deg, var(--color-blush-200)     0%, var(--color-rose-gold-300)  100%); }
+      .lightbox__placeholder--3 { background: linear-gradient(135deg, var(--color-emerald-200)   0%, var(--color-emerald-400)    100%); }
+      .lightbox__placeholder--4 { background: linear-gradient(135deg, var(--color-rose-gold-200) 0%, var(--color-blush-400)      100%); }
+      .lightbox__placeholder--5 { background: linear-gradient(135deg, var(--color-blush-400)     0%, var(--color-rose-gold-400)  100%); }
+      .lightbox__placeholder--6 { background: linear-gradient(135deg, var(--color-emerald-100)   0%, var(--color-blush-200)      100%); }
+      .lightbox__caption {
+        color:       var(--color-white);
+        font-family: var(--font-body);
+        font-size:   var(--text-sm);
+        text-align:  center;
+        opacity:     0.80;
+        margin:      0;
+        min-height:  1.4em;
+      }
+      .lightbox__close,
+      .lightbox__prev,
+      .lightbox__next {
+        position:        absolute;
+        display:         flex;
+        align-items:     center;
+        justify-content: center;
+        background:      rgba(255, 255, 255, 0.10);
+        border:          1px solid rgba(255, 255, 255, 0.22);
+        border-radius:   var(--radius-full);
+        color:           var(--color-white);
+        cursor:          pointer;
+        transition:      background 0.2s;
+      }
+      .lightbox__close:hover,
+      .lightbox__prev:hover,
+      .lightbox__next:hover {
+        background: rgba(255, 255, 255, 0.24);
+      }
+      .lightbox__close {
+        top:    -52px;
+        right:  0;
+        width:  40px;
+        height: 40px;
+      }
+      .lightbox__prev,
+      .lightbox__next {
+        top:       50%;
+        transform: translateY(-50%);
+        width:     48px;
+        height:    48px;
+      }
+      .lightbox__prev { left:  -68px; }
+      .lightbox__next { right: -68px; }
+
+      @media (max-width: 767px) {
+        .lightbox__stage     { max-width: 96vw; }
+        .lightbox__prev      { left:  -20px; width: 36px; height: 36px; }
+        .lightbox__next      { right: -20px; width: 36px; height: 36px; }
+        .lightbox__close     { top: -44px; width: 36px; height: 36px; }
+        .lightbox__placeholder { width: 85vw; height: 55vw; }
       }
 
     </style>
@@ -944,7 +1097,7 @@
         >
           <div class="section__decor section__decor--top" aria-hidden="true"></div>
 
-          <div class="section__inner flex-center-col">
+          <div class="section__inner flex-center-col" data-reveal>
 
             <!-- Crystal arch / crest with M&A monogram -->
             <div class="hero__crest" aria-hidden="true">
@@ -1014,7 +1167,7 @@
           class="section section--dark"
           aria-labelledby="countdown-heading"
         >
-          <div class="section__inner rhythm">
+          <div class="section__inner rhythm" data-reveal>
 
             <div class="section-title section-title--center section-title--inverse">
               <span class="section-title__eyebrow">The Big Day</span>
@@ -1075,7 +1228,7 @@
           class="section"
           aria-labelledby="our-story-heading"
         >
-          <div class="section__inner rhythm">
+          <div class="section__inner rhythm" data-reveal>
 
             <div class="section-title section-title--center">
               <span class="section-title__eyebrow">Our Journey</span>
@@ -1148,7 +1301,7 @@
           class="section section--crystal"
           aria-labelledby="the-event-heading"
         >
-          <div class="section__inner rhythm">
+          <div class="section__inner rhythm" data-reveal>
 
             <div class="section-title section-title--center">
               <span class="section-title__eyebrow">The Details</span>
@@ -1236,7 +1389,7 @@
           class="section"
           aria-labelledby="the-couple-heading"
         >
-          <div class="section__inner--xl rhythm">
+          <div class="section__inner--xl rhythm" data-reveal>
 
             <div class="section-title section-title--center">
               <span class="section-title__eyebrow">Together</span>
@@ -1299,7 +1452,7 @@
           class="section"
           aria-labelledby="gallery-heading"
         >
-          <div class="section__inner--xl rhythm">
+          <div class="section__inner--xl rhythm" data-reveal>
 
             <div class="section-title section-title--center">
               <span class="section-title__eyebrow">Memories</span>
@@ -1393,7 +1546,7 @@
           class="section section--crystal"
           aria-labelledby="location-heading"
         >
-          <div class="section__inner--xl rhythm">
+          <div class="section__inner--xl rhythm" data-reveal>
 
             <div class="section-title section-title--center">
               <span class="section-title__eyebrow">Find Us</span>
@@ -1522,7 +1675,7 @@
           class="section section--dark"
           aria-labelledby="rsvp-heading"
         >
-          <div class="section__inner--md rhythm">
+          <div class="section__inner--md rhythm" data-reveal>
 
             <div class="section-title section-title--center section-title--inverse">
               <span class="section-title__eyebrow">Kindly Reply</span>
