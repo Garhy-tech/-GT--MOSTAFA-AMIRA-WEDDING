@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- Background pill -->
+  <rect width="32" height="32" rx="8" fill="#FAD6E3"/>
+  <!-- Monogram M&A in emerald -->
+  <text
+    x="16" y="13"
+    font-size="8"
+    font-family="Georgia, 'Times New Roman', serif"
+    font-weight="700"
+    fill="#0D6857"
+    text-anchor="middle"
+    letter-spacing="1"
+  >M&amp;A</text>
+  <!-- Ornamental rule -->
+  <line x1="7" y1="17" x2="25" y2="17" stroke="#E7B7A1" stroke-width="0.75" stroke-linecap="round"/>
+  <!-- Wedding date -->
+  <text
+    x="16" y="24"
+    font-size="5"
+    font-family="Georgia, 'Times New Roman', serif"
+    fill="#0D6857"
+    text-anchor="middle"
+    letter-spacing="0.5"
+    opacity="0.85"
+  >31·07·2026</text>
+</svg>

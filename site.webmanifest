@@ -1,0 +1,20 @@
+{
+  "name": "Mostafa & Amira Wedding",
+  "short_name": "M&A Wedding",
+  "description": "You are cordially invited to celebrate the wedding of Mostafa & Amira — 31 July 2026, Royal Garden Palace, Cairo.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#FAD6E3",
+  "theme_color": "#FAD6E3",
+  "lang": "en",
+  "categories": ["lifestyle", "social"],
+  "icons": [
+    {
+      "src": "/assets/icons/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
