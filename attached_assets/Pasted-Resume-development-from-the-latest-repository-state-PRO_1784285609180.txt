@@ -1,0 +1,101 @@
+Resume development from the latest repository state.
+
+PROJECT_STATE.md is the official source of truth.
+
+Read PROJECT_STATE.md first.
+
+Do NOT perform a full repository analysis.
+
+Do NOT reread files unless they are directly required.
+
+Assume all previous commits are correct.
+
+Do NOT regenerate completed work.
+
+Do NOT modify the Design Foundation.
+
+Do NOT modify the Layout System.
+
+Do NOT modify the Component Library.
+
+Do NOT redesign the HTML structure.
+
+Modify only the JavaScript layer and only the minimum HTML/CSS required for integration if absolutely necessary.
+
+Current task:
+
+Task 7 — JavaScript Interaction Layer
+
+Objective:
+
+Implement the complete interaction layer using assets/js/app.js.
+
+Reuse the existing HTML structure, IDs, classes, data-* attributes, and CSS utilities.
+
+Do NOT create additional JavaScript files.
+
+Do NOT add external libraries.
+
+Do NOT use jQuery.
+
+Do NOT change the project architecture.
+
+Implement:
+
+• Page Loader
+• Countdown Timer
+• Floating Music Player
+• Music Play / Pause state
+• Sticky Header behavior
+• Mobile Navigation
+• Smooth Scroll Navigation
+• Active Navigation Highlight
+• Scroll Indicator behavior
+• Scroll Reveal using IntersectionObserver
+• Gallery Modal
+• Gallery Keyboard Navigation
+• Copy Invitation Link
+• RSVP Form Validation
+• RSVP Success State
+• Toast Notifications
+• Focus Management
+• ESC key handling
+• Reduced Motion support
+• Accessibility interactions
+
+Rules:
+
+• Use modern vanilla JavaScript only.
+• Reuse existing selectors.
+• Reuse existing CSS classes.
+• Do not duplicate logic.
+• Keep the code modular and well commented.
+• Keep performance optimized.
+• Avoid unnecessary DOM queries.
+• Use passive event listeners where appropriate.
+• Use requestAnimationFrame where beneficial.
+• Respect prefers-reduced-motion.
+• Do not implement animations beyond triggering existing CSS classes.
+• Do not modify HTML unless absolutely required.
+• Do not modify CSS unless required for a JavaScript integration fix.
+
+Before writing code:
+
+1. Read PROJECT_STATE.md.
+2. Read only index.html and assets/js/app.js.
+3. Briefly summarize the implementation plan.
+
+After implementation:
+
+• Verify all interactions.
+• Verify keyboard accessibility.
+• Verify responsive behavior.
+• Verify there are no JavaScript errors.
+• Verify performance.
+• Verify that every existing hook is connected.
+
+Create exactly one Git commit:
+
+feat(js): implement interaction layer
+
+Stop after committing and wait for further instructions.
