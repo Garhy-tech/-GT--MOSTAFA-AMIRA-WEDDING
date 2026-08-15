@@ -1,37 +1,32 @@
-# Production source sync guard
+# Production cutover guard
 
-## Why this file exists
+## Current deployment state
 
-The current Vercel production deployment for `mostafa-amira-2026` is **not Git-connected**. Vercel reports the latest deployment source as `cli`, with deployment metadata showing `actor: codex` and no framework binding.
+The live Vercel project `mostafa-amira-2026` was deployed through the CLI and is intentionally left untouched during GARHY INVITE development.
 
-At the same time, the `main` branch of this GitHub repository contains an older static implementation whose markup, media references and visual system do not exactly match the currently published Vercel experience.
+Reference deployment retained as the approved visual/media origin:
 
-Therefore:
-
-> **Do not merge this branch and point the production domain at GitHub until the exact current Vercel source/assets have been synchronized into the repository and visually regression-tested.**
-
-## Production reference captured during productization
-
-- Vercel team: `GARHY`
-- Vercel project: `mostafa-amira-2026`
+- Project: `mostafa-amira-2026`
 - Project ID: `prj_7r5uJUxlMQ6odx99vehYHYBIXJC3`
-- Reference production deployment: `dpl_4f4Eed6xebXjMA8fX1jcVjRAH4bT`
-- Reference alias: `mostafa-amira-2026.vercel.app`
-- Deployment source: CLI
-- Deployment state at inspection: READY
+- Immutable deployment: `mostafa-amira-2026-rbi4w8d0t-garhy.vercel.app`
+- Deployment ID: `dpl_4f4Eed6xebXjMA8fX1jcVjRAH4bT`
 
-## Required sync procedure before production cutover
+## Development strategy
 
-1. Preserve the live deployment and aliases as rollback references.
-2. Obtain/export the exact source bundle that produced the current Vercel deployment.
-3. Compare the bundle against GitHub `main`.
-4. Import missing images, optimized AVIF/WebP variants, audio, icons, current CSS, current JS and Supabase client configuration pattern.
-5. Remove obsolete placeholder-only sections from the older repository implementation.
-6. Apply the GARHY INVITE productization layer on top of the synchronized source.
-7. Create a Vercel Preview deployment from the feature branch.
-8. Run mobile, desktop, RTL/LTR, RSVP, share, music, map, lifecycle and accessibility regression checks.
-9. Only after approval: merge and attach the GARHY domain/portfolio route.
+`app-v2` is source-controlled independently from the old static implementation. It references the approved media and base stylesheet from the immutable Vercel deployment URL, not from the mutable production alias. This prevents missing media while keeping the legacy application fully recoverable.
 
-## Non-negotiable rule
+The old `index.html`, `assets/` implementation and production alias remain rollback references until final cutover.
 
-The live wedding experience is a flagship reference and must remain reversible. Production domain changes are a separate release step from code productization.
+## Final release gate
+
+Before a GARHY domain is attached:
+
+1. Deploy `app-v2` as a Vercel Preview.
+2. Validate mobile/desktop, Arabic/English, reduced motion, gallery, music, calendar, map, lifecycle and personalized invitation routing.
+3. Activate a persistent Supabase project and apply `supabase/migrations/202608150001_garhy_invite_core.sql`.
+4. Test private token resolution, RSVP, guest limits and pass issuance end-to-end.
+5. Migrate immutable media to GARHY-owned object storage/CDN if desired.
+6. Promote the approved Preview.
+7. Attach the GARHY domain only after the promoted deployment is verified.
+
+No domain or current production alias should be changed during development.
