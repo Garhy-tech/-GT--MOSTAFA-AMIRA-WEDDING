@@ -3,10 +3,23 @@ import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright';
 
 const BASE = process.env.GARHY_INVITE_QA_URL || 'http://127.0.0.1:4173/app-v2/index.html';
+const ORIGIN = new URL(BASE).origin;
 const ARTIFACT_DIR = process.env.GARHY_INVITE_ARTIFACT_DIR || 'artifacts/browser-qa';
 await mkdir(ARTIFACT_DIR, { recursive: true });
 
 const browser = await chromium.launch({ headless: true });
+
+function isBenignMediaFallbackAbort(url, errorText) {
+  const path = new URL(url).pathname;
+  return errorText === 'net::ERR_ABORTED' && /^\/assets\/v2\/audio\/daweta-zewace\.(?:m4a|mp3)$/.test(path);
+}
+
+async function assertBinaryAsset(page, path, minimumBytes, name) {
+  const response = await page.request.get(`${ORIGIN}${path}`);
+  assert.equal(response.status(), 200, `${name}: ${path} must return 200`);
+  const body = await response.body();
+  assert.ok(body.byteLength > minimumBytes, `${name}: ${path} is unexpectedly small (${body.byteLength} bytes)`);
+}
 
 async function inspectPage({ name, width, height }) {
   const context = await browser.newContext({ viewport: { width, height }, locale: 'ar-EG' });
@@ -20,8 +33,9 @@ async function inspectPage({ name, width, height }) {
   });
   page.on('requestfailed', request => {
     const url = request.url();
-    if (url.startsWith('http://127.0.0.1:4173/')) {
-      failedLocalRequests.push(`${request.method()} ${url} — ${request.failure()?.errorText || 'failed'}`);
+    const errorText = request.failure()?.errorText || 'failed';
+    if (url.startsWith(`${ORIGIN}/`) && !isBenignMediaFallbackAbort(url, errorText)) {
+      failedLocalRequests.push(`${request.method()} ${url} — ${errorText}`);
     }
   });
 
@@ -42,6 +56,15 @@ async function inspectPage({ name, width, height }) {
   assert.equal(rsvpOpenAtFixedTime, false, `${name}: RSVP must be closed after the event`);
   assert.equal(await page.locator('#rsvp-form').isVisible(), false, `${name}: closed RSVP form must not be visible`);
   assert.equal(await page.locator('[data-rsvp-closed]').isVisible(), true, `${name}: post-event memory state must be visible`);
+
+  const audioSupport = await page.evaluate(() => {
+    const audio = document.querySelector('[data-music-audio]');
+    if (!(audio instanceof HTMLAudioElement)) return false;
+    return Boolean(audio.canPlayType('audio/mp4') || audio.canPlayType('audio/mpeg'));
+  });
+  assert.equal(audioSupport, true, `${name}: browser must support at least one configured wedding-audio format`);
+  await assertBinaryAsset(page, '/assets/v2/audio/daweta-zewace.m4a', 10_000, name);
+  await assertBinaryAsset(page, '/assets/v2/audio/daweta-zewace.mp3', 10_000, name);
 
   await page.locator('[data-language-toggle]').click();
   assert.equal(await page.locator('html').getAttribute('dir'), 'ltr', `${name}: English must switch to LTR`);
