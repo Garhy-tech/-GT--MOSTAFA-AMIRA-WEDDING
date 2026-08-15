@@ -12,15 +12,28 @@
   "rsvpClosesAt": "2026-07-31T18:30:00+03:00",
   "archiveAfterDays": 45,
   "defaultLocale": "ar",
-  "locales": ["ar", "en"],
-  "assetOrigin": "https://mostafa-amira-2026-rbi4w8d0t-garhy.vercel.app",
+  "locales": [
+    "ar",
+    "en"
+  ],
+  "assetOrigin": "/assets/v2",
   "venue": {
     "name": "Dar Al Eshara",
     "area": "Almazah",
     "city": "Cairo",
     "mapsUrl": "https://maps.app.goo.gl/BzxKEpQVtUCoLMjm7?g_st=afm"
   },
-  "sections": ["blessing", "hero", "countdown", "story", "details", "moments", "location", "rsvp", "dua"],
+  "sections": [
+    "blessing",
+    "hero",
+    "countdown",
+    "story",
+    "details",
+    "moments",
+    "location",
+    "rsvp",
+    "dua"
+  ],
   "features": {
     "music": true,
     "gallery": true,
