@@ -1,0 +1,40 @@
+name: GARHY INVITE Alias Reconcile
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/garhy-invite-alias-reconcile.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  reconcile-alias:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: team_mZ52AwdCUXSmkLKH3YMqqf5U
+      VERCEL_PROJECT_ID: prj_7r5uJUxlMQ6odx99vehYHYBIXJC3
+      PROD_DEPLOYMENT: mostafa-amira-2026-55z4cqkzm-garhy.vercel.app
+      LEGACY_ALIAS: mostafa-amira-2026-founder-garhy-garhy.vercel.app
+    steps:
+      - name: Reassign legacy Vercel alias to approved V2 production
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${VERCEL_TOKEN:-}"
+          npx --yes vercel@latest alias set "$PROD_DEPLOYMENT" "$LEGACY_ALIAS" --scope=garhy --token="$VERCEL_TOKEN"
+
+      - name: Verify reconciled alias serves V2
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes vercel@latest curl / --deployment "https://$LEGACY_ALIAS" > /tmp/garhy-alias.html
+          grep -Fq 'data-garhy-invite' /tmp/garhy-alias.html
+          grep -Fq 'A GARHY INVITE Experience' /tmp/garhy-alias.html
+          if grep -Fq 'Royal Garden Palace' /tmp/garhy-alias.html; then
+            echo 'Legacy content still detected on reconciled alias.' >&2
+            exit 1
+          fi
