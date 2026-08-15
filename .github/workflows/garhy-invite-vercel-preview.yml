@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/garhy-invite-vercel-preview.yml'
+      - 'deploy/vercel.preview.json'
 
 permissions:
   contents: read
@@ -18,6 +19,7 @@ jobs:
       VERCEL_ORG_ID: team_mZ52AwdCUXSmkLKH3YMqqf5U
       VERCEL_PROJECT_ID: prj_IGvUFSpbw066ZLUfvIezMdZNIFEy
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      RELEASE_DIR: .garhy-release
     steps:
       - name: Checkout tested source
         uses: actions/checkout@v4
@@ -39,23 +41,45 @@ jobs:
           fi
           echo 'ready=true' >> "$GITHUB_OUTPUT"
 
-      - name: Pull preview project configuration
+      - name: Assemble V2-only release directory
         if: steps.preflight.outputs.ready == 'true'
         shell: bash
-        run: npx --yes vercel@latest pull --yes --environment=preview --token="$VERCEL_TOKEN"
+        run: |
+          set -euo pipefail
+          rm -rf "$RELEASE_DIR"
+          mkdir -p "$RELEASE_DIR/app-v2" "$RELEASE_DIR/platform/runtime" "$RELEASE_DIR/assets"
 
-      - name: Build release candidate
+          cp app-v2/index.html "$RELEASE_DIR/index.html"
+          cp app-v2/styles.css "$RELEASE_DIR/app-v2/styles.css"
+          cp app-v2/app.js "$RELEASE_DIR/app-v2/app.js"
+          cp app-v2/event.json "$RELEASE_DIR/app-v2/event.json"
+          cp app-v2/supabase-config.js "$RELEASE_DIR/app-v2/supabase-config.js"
+          cp platform/runtime/core.js "$RELEASE_DIR/platform/runtime/core.js"
+          cp -R assets/v2 "$RELEASE_DIR/assets/v2"
+          cp deploy/vercel.preview.json "$RELEASE_DIR/vercel.json"
+
+          test -s "$RELEASE_DIR/index.html"
+          test -s "$RELEASE_DIR/app-v2/event.json"
+          test -s "$RELEASE_DIR/platform/runtime/core.js"
+          test -d "$RELEASE_DIR/assets/v2"
+
+      - name: Pull isolated preview project configuration
         if: steps.preflight.outputs.ready == 'true'
         shell: bash
-        run: npx --yes vercel@latest build --token="$VERCEL_TOKEN"
+        run: npx --yes vercel@latest pull --yes --environment=preview --cwd "$RELEASE_DIR" --token="$VERCEL_TOKEN"
 
-      - name: Deploy isolated preview
+      - name: Build V2 release candidate
+        if: steps.preflight.outputs.ready == 'true'
+        shell: bash
+        run: npx --yes vercel@latest build --cwd "$RELEASE_DIR" --token="$VERCEL_TOKEN"
+
+      - name: Deploy isolated V2 preview
         if: steps.preflight.outputs.ready == 'true'
         id: deploy
         shell: bash
         run: |
           set -euo pipefail
-          url="$(npx --yes vercel@latest deploy --prebuilt --token="$VERCEL_TOKEN" | tail -n 1)"
+          url="$(npx --yes vercel@latest deploy --prebuilt --cwd "$RELEASE_DIR" --token="$VERCEL_TOKEN" | tail -n 1)"
           echo "url=$url" >> "$GITHUB_OUTPUT"
           printf '%s\n' "$url" > vercel-preview-url.txt
           {
@@ -63,6 +87,7 @@ jobs:
             echo
             echo "Deployment: $url"
             echo
+            echo 'Source: V2-only release directory.'
             echo 'Target: isolated `garhy-invite-v2-preview` project. Production aliases and GARHY domains were not modified.'
           } >> "$GITHUB_STEP_SUMMARY"
 
