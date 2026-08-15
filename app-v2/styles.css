@@ -2,6 +2,11 @@
   --gi-gold: #c9a77f;
 }
 
+/* Author styles must never override the platform `hidden` state. */
+[hidden] {
+  display: none !important;
+}
+
 .gi-status {
   position: fixed;
   top: 72px;
