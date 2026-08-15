@@ -21,6 +21,19 @@ async function assertBinaryAsset(page, path, minimumBytes, name) {
   assert.ok(body.byteLength > minimumBytes, `${name}: ${path} is unexpectedly small (${body.byteLength} bytes)`);
 }
 
+async function revealEverySection(page, name) {
+  const reveals = page.locator('.reveal');
+  const count = await reveals.count();
+  for (let i = 0; i < count; i += 1) {
+    const item = reveals.nth(i);
+    await item.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(80);
+  }
+  await page.waitForTimeout(180);
+  const hiddenRevealCount = await page.locator('.reveal:not(.is-visible)').count();
+  assert.equal(hiddenRevealCount, 0, `${name}: every reveal element must become visible after entering the viewport`);
+}
+
 async function inspectPage({ name, width, height }) {
   const context = await browser.newContext({ viewport: { width, height }, locale: 'ar-EG' });
   const page = await context.newPage();
@@ -80,10 +93,7 @@ async function inspectPage({ name, width, height }) {
   assert.equal(await page.locator('[data-lightbox]').getAttribute('open'), '', `${name}: gallery lightbox must open`);
   await page.locator('[data-lightbox-close]').click();
 
-  for (let y = 0; y <= await page.evaluate(() => document.body.scrollHeight); y += Math.max(500, height - 120)) {
-    await page.evaluate(scrollY => window.scrollTo(0, scrollY), y);
-    await page.waitForTimeout(90);
-  }
+  await revealEverySection(page, name);
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.waitForTimeout(250);
 
@@ -104,7 +114,11 @@ async function inspectPage({ name, width, height }) {
   assert.deepEqual(errors, [], `${name}: browser errors:\n${errors.join('\n')}`);
 
   await context.close();
-  return { name, lifecycle, overflow };
+  return { name, lifecycle, revealCount: countSafe(count => count, await page?.locator?.('.reveal')?.count?.()), overflow };
+}
+
+function countSafe(selector, value) {
+  return typeof value === 'number' ? selector(value) : null;
 }
 
 try {
