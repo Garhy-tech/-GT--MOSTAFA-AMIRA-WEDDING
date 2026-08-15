@@ -1,0 +1,53 @@
+name: GARHY INVITE CI
+
+on:
+  push:
+    branches: ["feat/garhy-invite-platform-v1", "main"]
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check JavaScript syntax
+        run: |
+          node --check platform/runtime/core.js
+          node --check app-v2/app.js
+          node --check app-v2/supabase-config.js
+      - name: Validate JSON
+        run: |
+          python - <<'PY'
+          import json
+          for p in ['app-v2/event.json','platform/event.schema.json','platform/examples/events.json','vercel.json']:
+              with open(p, encoding='utf-8') as f: json.load(f)
+              print('OK', p)
+          PY
+      - name: Validate HTML parses
+        run: |
+          python - <<'PY'
+          from html.parser import HTMLParser
+          class P(HTMLParser): pass
+          p=P()
+          with open('app-v2/index.html', encoding='utf-8') as f: p.feed(f.read())
+          print('HTML parse OK')
+          PY
+      - name: Security guard
+        shell: bash
+        run: |
+          ! grep -RIE "service[_-]?role|sb_secret_|SUPABASE_SERVICE_ROLE" app-v2 platform --exclude='*.md'
+          grep -q "revoke all on public.events" supabase/migrations/202608150001_garhy_invite_core.sql
+          grep -q "security definer" supabase/migrations/202608150001_garhy_invite_core.sql
+      - name: Release files present
+        run: |
+          test -s app-v2/index.html
+          test -s app-v2/app.js
+          test -s app-v2/styles.css
+          test -s app-v2/event.json
+          test -s platform/runtime/core.js
+          test -s supabase/migrations/202608150001_garhy_invite_core.sql
