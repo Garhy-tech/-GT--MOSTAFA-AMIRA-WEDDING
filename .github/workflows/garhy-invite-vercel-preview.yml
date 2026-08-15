@@ -86,7 +86,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          npx --yes vercel@latest curl / --deployment "$PREVIEW_URL" --token="$VERCEL_TOKEN" > /tmp/garhy-root.html
+          npx --yes vercel@latest --token="$VERCEL_TOKEN" curl / --deployment "$PREVIEW_URL" > /tmp/garhy-root.html
           grep -Fq 'data-garhy-invite' /tmp/garhy-root.html
           grep -Fq 'A GARHY INVITE Experience' /tmp/garhy-root.html
           if grep -Fq 'Royal Garden Palace' /tmp/garhy-root.html; then
@@ -94,21 +94,21 @@ jobs:
             exit 1
           fi
 
-          npx --yes vercel@latest curl /app-v2/event.json --deployment "$PREVIEW_URL" --token="$VERCEL_TOKEN" > /tmp/garhy-event.json
+          npx --yes vercel@latest --token="$VERCEL_TOKEN" curl /app-v2/event.json --deployment "$PREVIEW_URL" > /tmp/garhy-event.json
           grep -Fq '"slug": "mostafa-amira-2026"' /tmp/garhy-event.json
           grep -Fq '"assetOrigin": "/assets/v2"' /tmp/garhy-event.json
 
-          npx --yes vercel@latest curl /platform/runtime/core.js --deployment "$PREVIEW_URL" --token="$VERCEL_TOKEN" > /tmp/garhy-core.js
+          npx --yes vercel@latest --token="$VERCEL_TOKEN" curl /platform/runtime/core.js --deployment "$PREVIEW_URL" > /tmp/garhy-core.js
           grep -Fq 'GarhyInviteCore' /tmp/garhy-core.js
 
-          npx --yes vercel@latest curl /i/GARHYQAROUTETEST0123456789abcdef --deployment "$PREVIEW_URL" --token="$VERCEL_TOKEN" > /tmp/garhy-personal.html
+          npx --yes vercel@latest --token="$VERCEL_TOKEN" curl /i/GARHYQAROUTETEST0123456789abcdef --deployment "$PREVIEW_URL" > /tmp/garhy-personal.html
           grep -Fq 'data-garhy-invite' /tmp/garhy-personal.html
           grep -Fq 'A GARHY INVITE Experience' /tmp/garhy-personal.html
 
-          npx --yes vercel@latest curl /assets/v2/images/hero/hero-wedding-story.jpg --deployment "$PREVIEW_URL" --token="$VERCEL_TOKEN" > /tmp/garhy-hero.jpg
+          npx --yes vercel@latest --token="$VERCEL_TOKEN" curl /assets/v2/images/hero/hero-wedding-story.jpg --deployment "$PREVIEW_URL" > /tmp/garhy-hero.jpg
           test "$(wc -c < /tmp/garhy-hero.jpg)" -gt 10000
 
-          npx --yes vercel@latest curl /assets/v2/audio/daweta-zewace.mp3 --deployment "$PREVIEW_URL" --token="$VERCEL_TOKEN" > /tmp/garhy-audio.mp3
+          npx --yes vercel@latest --token="$VERCEL_TOKEN" curl /assets/v2/audio/daweta-zewace.mp3 --deployment "$PREVIEW_URL" > /tmp/garhy-audio.mp3
           test "$(wc -c < /tmp/garhy-audio.mp3)" -gt 10000
 
           {
