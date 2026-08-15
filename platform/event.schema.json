@@ -8,29 +8,22 @@
   "properties": {
     "id": { "type": "string", "minLength": 3, "maxLength": 120 },
     "slug": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
-    "type": {
-      "type": "string",
-      "enum": ["wedding", "engagement", "birthday", "conference", "opening", "graduation", "corporate", "vip", "custom"]
-    },
-    "status": {
-      "type": "string",
-      "enum": ["draft", "preview", "published", "archived"],
-      "default": "draft"
-    },
+    "type": { "type": "string", "enum": ["wedding", "engagement", "birthday", "conference", "opening", "grand_opening", "graduation", "corporate", "vip", "custom"] },
+    "status": { "type": "string", "enum": ["draft", "preview", "published", "archived"], "default": "draft" },
     "title": { "type": "string", "minLength": 1, "maxLength": 160 },
+    "subtitle": { "type": "string", "maxLength": 160 },
     "titleAr": { "type": "string", "maxLength": 160 },
     "description": { "type": "string", "maxLength": 800 },
     "descriptionAr": { "type": "string", "maxLength": 800 },
     "startsAt": { "type": "string", "format": "date-time" },
     "endsAt": { "type": "string", "format": "date-time" },
+    "rsvpOpensAt": { "type": "string", "format": "date-time" },
+    "rsvpClosesAt": { "type": "string", "format": "date-time" },
+    "archiveAfterDays": { "type": "integer", "minimum": 0, "maximum": 3650, "default": 45 },
     "timezone": { "type": "string", "minLength": 1, "maxLength": 80 },
     "defaultLocale": { "type": "string", "enum": ["ar", "en"], "default": "ar" },
-    "locales": {
-      "type": "array",
-      "items": { "type": "string", "enum": ["ar", "en"] },
-      "uniqueItems": true,
-      "minItems": 1
-    },
+    "locales": { "type": "array", "items": { "type": "string", "enum": ["ar", "en"] }, "uniqueItems": true, "minItems": 1 },
+    "assetOrigin": { "type": "string", "format": "uri" },
     "hosts": {
       "type": "array",
       "items": {
@@ -51,6 +44,8 @@
       "properties": {
         "name": { "type": "string", "maxLength": 160 },
         "nameAr": { "type": "string", "maxLength": 160 },
+        "area": { "type": "string", "maxLength": 160 },
+        "city": { "type": "string", "maxLength": 160 },
         "address": { "type": "string", "maxLength": 300 },
         "addressAr": { "type": "string", "maxLength": 300 },
         "mapsUrl": { "type": "string", "format": "uri" },
@@ -68,6 +63,14 @@
         "musicUrl": { "type": "string", "format": "uri-reference" }
       }
     },
+    "features": {
+      "type": "object",
+      "additionalProperties": { "type": "boolean" },
+      "properties": {
+        "music": { "type": "boolean" }, "gallery": { "type": "boolean" }, "calendar": { "type": "boolean" },
+        "guestPersonalization": { "type": "boolean" }, "guestPass": { "type": "boolean" }, "lifecycle": { "type": "boolean" }, "bilingual": { "type": "boolean" }
+      }
+    },
     "rsvp": {
       "type": "object",
       "additionalProperties": false,
@@ -76,37 +79,26 @@
         "closesAt": { "type": "string", "format": "date-time" },
         "maxGuests": { "type": "integer", "minimum": 1, "maximum": 20 },
         "allowEdit": { "type": "boolean", "default": true },
-        "questions": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "required": ["id", "type", "label"],
-            "properties": {
-              "id": { "type": "string", "pattern": "^[a-zA-Z0-9_-]+$" },
-              "type": { "type": "string", "enum": ["text", "textarea", "select", "boolean"] },
-              "label": { "type": "string", "maxLength": 160 },
-              "required": { "type": "boolean", "default": false },
-              "options": { "type": "array", "items": { "type": "string" } }
-            }
-          }
-        }
+        "questions": { "type": "array", "items": { "type": "object", "additionalProperties": true, "required": ["id", "type", "label"] } }
       }
     },
     "sections": {
       "type": "array",
       "minItems": 1,
       "items": {
-        "type": "object",
-        "additionalProperties": true,
-        "required": ["id", "kind", "enabled"],
-        "properties": {
-          "id": { "type": "string", "pattern": "^[a-zA-Z0-9_-]+$" },
-          "kind": {
-            "type": "string",
-            "enum": ["blessing", "hero", "countdown", "story", "details", "gallery", "speakers", "agenda", "venue", "rsvp", "wishes", "contact", "pass", "custom"]
-          },
-          "enabled": { "type": "boolean" }
-        }
+        "oneOf": [
+          { "type": "string", "enum": ["blessing", "hero", "countdown", "story", "details", "moments", "gallery", "speakers", "agenda", "location", "venue", "rsvp", "dua", "wishes", "contact", "pass", "custom"] },
+          {
+            "type": "object",
+            "additionalProperties": true,
+            "required": ["id", "kind", "enabled"],
+            "properties": {
+              "id": { "type": "string", "pattern": "^[a-zA-Z0-9_-]+$" },
+              "kind": { "type": "string" },
+              "enabled": { "type": "boolean" }
+            }
+          }
+        ]
       }
     }
   }
