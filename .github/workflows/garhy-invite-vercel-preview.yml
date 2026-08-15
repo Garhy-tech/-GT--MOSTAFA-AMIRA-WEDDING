@@ -1,0 +1,75 @@
+name: GARHY INVITE Vercel Preview
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/garhy-invite-vercel-preview.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      VERCEL_ORG_ID: team_mZ52AwdCUXSmkLKH3YMqqf5U
+      VERCEL_PROJECT_ID: prj_IGvUFSpbw066ZLUfvIezMdZNIFEy
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+    steps:
+      - name: Checkout tested source
+        uses: actions/checkout@v4
+
+      - name: Preview deployment preflight
+        id: preflight
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${VERCEL_TOKEN:-}" ]; then
+            echo 'ready=false' >> "$GITHUB_OUTPUT"
+            {
+              echo '## GARHY INVITE Vercel Preview'
+              echo
+              echo 'Preview deployment was not attempted because repository secret `VERCEL_TOKEN` is not configured.'
+              echo 'The workflow is intentionally restricted to the isolated preview project and never uses `--prod`.'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          echo 'ready=true' >> "$GITHUB_OUTPUT"
+
+      - name: Pull preview project configuration
+        if: steps.preflight.outputs.ready == 'true'
+        shell: bash
+        run: npx --yes vercel@latest pull --yes --environment=preview --token="$VERCEL_TOKEN"
+
+      - name: Build release candidate
+        if: steps.preflight.outputs.ready == 'true'
+        shell: bash
+        run: npx --yes vercel@latest build --token="$VERCEL_TOKEN"
+
+      - name: Deploy isolated preview
+        if: steps.preflight.outputs.ready == 'true'
+        id: deploy
+        shell: bash
+        run: |
+          set -euo pipefail
+          url="$(npx --yes vercel@latest deploy --prebuilt --token="$VERCEL_TOKEN" | tail -n 1)"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          printf '%s\n' "$url" > vercel-preview-url.txt
+          {
+            echo '## GARHY INVITE Vercel Preview'
+            echo
+            echo "Deployment: $url"
+            echo
+            echo 'Target: isolated `garhy-invite-v2-preview` project. Production aliases and GARHY domains were not modified.'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload preview URL record
+        if: steps.preflight.outputs.ready == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: garhy-invite-vercel-preview-${{ github.sha }}
+          path: vercel-preview-url.txt
+          retention-days: 14
