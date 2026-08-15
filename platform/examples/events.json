@@ -1,0 +1,115 @@
+{
+  "wedding": {
+    "id": "mostafa-amira-2026",
+    "slug": "mostafa-amira-2026",
+    "type": "wedding",
+    "status": "published",
+    "title": "Mostafa & Amira",
+    "titleAr": "مصطفى وأميرة",
+    "startsAt": "2026-07-31T19:00:00+03:00",
+    "endsAt": "2026-07-31T23:30:00+03:00",
+    "timezone": "Africa/Cairo",
+    "defaultLocale": "ar",
+    "locales": ["ar", "en"],
+    "hosts": [
+      { "name": "Mostafa", "nameAr": "مصطفى", "role": "groom" },
+      { "name": "Amira", "nameAr": "أميرة", "role": "bride" }
+    ],
+    "venue": {
+      "name": "Dar Al Eshara",
+      "nameAr": "دار الإشارة",
+      "address": "Almazah, Cairo, Egypt",
+      "addressAr": "الماظة، القاهرة، مصر",
+      "mapsUrl": "https://maps.app.goo.gl/BzxKEpQVtUCoLMjm7?g_st=afm"
+    },
+    "theme": { "preset": "emerald-luxury", "accent": "#153F36", "surface": "#F4EEE4" },
+    "rsvp": { "enabled": false, "maxGuests": 4, "allowEdit": false },
+    "sections": [
+      { "id": "blessing", "kind": "blessing", "enabled": true },
+      { "id": "hero", "kind": "hero", "enabled": true },
+      { "id": "countdown", "kind": "countdown", "enabled": true },
+      { "id": "story", "kind": "story", "enabled": true },
+      { "id": "details", "kind": "details", "enabled": true },
+      { "id": "gallery", "kind": "gallery", "enabled": true },
+      { "id": "location", "kind": "venue", "enabled": true },
+      { "id": "rsvp", "kind": "rsvp", "enabled": true }
+    ]
+  },
+  "birthday": {
+    "id": "sample-birthday",
+    "slug": "sample-birthday",
+    "type": "birthday",
+    "status": "draft",
+    "title": "Birthday Celebration",
+    "startsAt": "2026-12-01T20:00:00+03:00",
+    "endsAt": "2026-12-01T23:00:00+03:00",
+    "timezone": "Africa/Cairo",
+    "defaultLocale": "ar",
+    "locales": ["ar", "en"],
+    "venue": { "name": "Private Venue" },
+    "theme": { "preset": "midnight-celebration", "accent": "#8A6F3D", "surface": "#121212" },
+    "rsvp": { "enabled": true, "maxGuests": 3, "allowEdit": true },
+    "sections": [
+      { "id": "hero", "kind": "hero", "enabled": true },
+      { "id": "story", "kind": "story", "enabled": true },
+      { "id": "gallery", "kind": "gallery", "enabled": true },
+      { "id": "venue", "kind": "venue", "enabled": true },
+      { "id": "rsvp", "kind": "rsvp", "enabled": true },
+      { "id": "wishes", "kind": "wishes", "enabled": true }
+    ]
+  },
+  "conference": {
+    "id": "sample-conference",
+    "slug": "sample-conference",
+    "type": "conference",
+    "status": "draft",
+    "title": "GARHY Future Conference",
+    "startsAt": "2027-02-15T09:00:00+03:00",
+    "endsAt": "2027-02-15T18:00:00+03:00",
+    "timezone": "Africa/Cairo",
+    "defaultLocale": "en",
+    "locales": ["en", "ar"],
+    "venue": { "name": "Conference Center" },
+    "theme": { "preset": "executive-tech", "accent": "#1C3B57", "surface": "#F7F9FC" },
+    "rsvp": {
+      "enabled": true,
+      "maxGuests": 1,
+      "allowEdit": true,
+      "questions": [
+        { "id": "company", "type": "text", "label": "Company", "required": true },
+        { "id": "role", "type": "text", "label": "Role", "required": true }
+      ]
+    },
+    "sections": [
+      { "id": "hero", "kind": "hero", "enabled": true },
+      { "id": "speakers", "kind": "speakers", "enabled": true },
+      { "id": "agenda", "kind": "agenda", "enabled": true },
+      { "id": "venue", "kind": "venue", "enabled": true },
+      { "id": "rsvp", "kind": "rsvp", "enabled": true },
+      { "id": "pass", "kind": "pass", "enabled": true }
+    ]
+  },
+  "opening": {
+    "id": "sample-opening",
+    "slug": "sample-opening",
+    "type": "opening",
+    "status": "draft",
+    "title": "Grand Opening",
+    "startsAt": "2027-03-20T18:00:00+03:00",
+    "endsAt": "2027-03-20T22:00:00+03:00",
+    "timezone": "Africa/Cairo",
+    "defaultLocale": "ar",
+    "locales": ["ar", "en"],
+    "venue": { "name": "Flagship Location" },
+    "theme": { "preset": "brand-premiere", "accent": "#111111", "surface": "#F3EFE8" },
+    "rsvp": { "enabled": true, "maxGuests": 2, "allowEdit": true },
+    "sections": [
+      { "id": "hero", "kind": "hero", "enabled": true },
+      { "id": "details", "kind": "details", "enabled": true },
+      { "id": "agenda", "kind": "agenda", "enabled": true },
+      { "id": "venue", "kind": "venue", "enabled": true },
+      { "id": "rsvp", "kind": "rsvp", "enabled": true },
+      { "id": "contact", "kind": "contact", "enabled": true }
+    ]
+  }
+}
