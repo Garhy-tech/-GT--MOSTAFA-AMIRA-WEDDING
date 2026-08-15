@@ -7,6 +7,9 @@ on:
     paths:
       - '.github/workflows/garhy-invite-vercel-preview.yml'
       - 'deploy/vercel.preview.json'
+      - 'app-v2/**'
+      - 'platform/runtime/**'
+      - 'assets/v2/**'
 
 permissions:
   contents: read
@@ -85,8 +88,9 @@ jobs:
           PREVIEW_URL: ${{ steps.deploy.outputs.url }}
         run: |
           set -euo pipefail
+          QA_TOKEN='GARHYQAROUTETEST0123456789abcdef'
 
-          # VERCEL_TOKEN is already exported in the job environment. `vercel curl`
+          # VERCEL_TOKEN is exported in the job environment. `vercel curl`
           # uses it automatically and generates the Deployment Protection bypass.
           npx --yes vercel@latest curl / --deployment "$PREVIEW_URL" > /tmp/garhy-root.html
           grep -Fq 'data-garhy-invite' /tmp/garhy-root.html
@@ -102,8 +106,9 @@ jobs:
 
           npx --yes vercel@latest curl /platform/runtime/core.js --deployment "$PREVIEW_URL" > /tmp/garhy-core.js
           grep -Fq 'GarhyInviteCore' /tmp/garhy-core.js
+          grep -Fq "params.get('invite')" /tmp/garhy-core.js
 
-          npx --yes vercel@latest curl /i/GARHYQAROUTETEST0123456789abcdef --deployment "$PREVIEW_URL" > /tmp/garhy-personal.html
+          npx --yes vercel@latest curl "/?invite=${QA_TOKEN}" --deployment "$PREVIEW_URL" > /tmp/garhy-personal.html
           grep -Fq 'data-garhy-invite' /tmp/garhy-personal.html
           grep -Fq 'A GARHY INVITE Experience' /tmp/garhy-personal.html
 
@@ -119,7 +124,8 @@ jobs:
             echo "Deployment: $PREVIEW_URL"
             echo
             echo '✅ Root serves GARHY INVITE V2.'
-            echo '✅ Personalized `/i/:token` route serves GARHY INVITE V2.'
+            echo '✅ Personalized `?invite=<token>` entry serves GARHY INVITE V2.'
+            echo '✅ Runtime contains validated query-token extraction.'
             echo '✅ Event config and runtime are reachable.'
             echo '✅ Hero media and wedding audio are reachable.'
             echo '✅ Legacy root signature was not detected.'
