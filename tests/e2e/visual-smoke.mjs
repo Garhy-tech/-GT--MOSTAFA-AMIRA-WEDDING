@@ -32,6 +32,7 @@ async function revealEverySection(page, name) {
   await page.waitForTimeout(180);
   const hiddenRevealCount = await page.locator('.reveal:not(.is-visible)').count();
   assert.equal(hiddenRevealCount, 0, `${name}: every reveal element must become visible after entering the viewport`);
+  return count;
 }
 
 async function inspectPage({ name, width, height }) {
@@ -93,7 +94,7 @@ async function inspectPage({ name, width, height }) {
   assert.equal(await page.locator('[data-lightbox]').getAttribute('open'), '', `${name}: gallery lightbox must open`);
   await page.locator('[data-lightbox-close]').click();
 
-  await revealEverySection(page, name);
+  const revealCount = await revealEverySection(page, name);
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.waitForTimeout(250);
 
@@ -113,12 +114,9 @@ async function inspectPage({ name, width, height }) {
   assert.deepEqual(failedLocalRequests, [], `${name}: local requests failed:\n${failedLocalRequests.join('\n')}`);
   assert.deepEqual(errors, [], `${name}: browser errors:\n${errors.join('\n')}`);
 
+  const result = { name, lifecycle, revealCount, overflow };
   await context.close();
-  return { name, lifecycle, revealCount: countSafe(count => count, await page?.locator?.('.reveal')?.count?.()), overflow };
-}
-
-function countSafe(selector, value) {
-  return typeof value === 'number' ? selector(value) : null;
+  return result;
 }
 
 try {
