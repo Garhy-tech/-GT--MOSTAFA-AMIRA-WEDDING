@@ -1,800 +1,545 @@
 /*!
- * Mostafa & Amira Wedding — app.js
- * Phase 7: Complete Interaction Layer
+ * GARHY INVITE — Mostafa & Amira flagship experience
+ * Productization layer v1.0
  *
- * Modules (in boot order):
- *  1.  Loader
- *  2.  Sticky Header
- *  3.  Mobile Navigation
- *  4.  Smooth Scroll + Active Nav Highlight
- *  5.  Scroll Indicator
- *  6.  Scroll Reveal
- *  7.  Countdown Timer
- *  8.  Music Player
- *  9.  Toast Notifications
- * 10.  Modal (share sheet)
- * 11.  Clipboard Copy
- * 12.  Gallery Lightbox
- * 13.  RSVP Validation + Submission
+ * This file intentionally keeps the legacy static site deployable while
+ * introducing reusable event lifecycle, guest personalization, smart mobile
+ * actions, RSVP state, guest-pass primitives and lightweight analytics.
  */
 
 'use strict';
 
-/* ═══════════════════════════════════════════════════════════
-   UTILITIES
-   Cached at module scope so every function shares the same
-   references without redundant querySelector calls.
-════════════════════════════════════════════════════════════ */
-
-/** @type {(sel: string, ctx?: ParentNode) => Element | null} */
-const $ = (sel, ctx = document) => ctx.querySelector(sel);
-
-/** @type {(sel: string, ctx?: ParentNode) => Element[]} */
-const $$ = (sel, ctx = document) => Array.from(ctx.querySelectorAll(sel));
-
-/** True when the OS/browser reduces motion */
+const $ = (selector, context = document) => context.querySelector(selector);
+const $$ = (selector, context = document) => Array.from(context.querySelectorAll(selector));
 const REDUCED_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-/** Clamp a number between min and max */
-const clamp = (n, lo, hi) => Math.min(Math.max(n, lo), hi);
+const GARHY_EVENT = Object.freeze({
+  id: 'mostafa-amira-2026',
+  product: 'GARHY INVITE',
+  type: 'wedding',
+  locale: 'ar-EG',
+  timezone: 'Africa/Cairo',
+  title: 'Mostafa & Amira',
+  titleAr: 'مصطفى وأميرة',
+  startsAt: '2026-07-31T19:00:00+03:00',
+  endsAt: '2026-07-31T23:30:00+03:00',
+  venue: {
+    name: 'Dar Al Eshara',
+    nameAr: 'دار الإشارة',
+    city: 'Cairo',
+    cityAr: 'القاهرة',
+    mapsUrl: 'https://maps.app.goo.gl/BzxKEpQVtUCoLMjm7?g_st=afm'
+  },
+  lifecycle: {
+    finalHours: 72,
+    thankYouDays: 30
+  }
+});
 
+const state = {
+  guestName: '',
+  inviteToken: '',
+  lifecycle: 'upcoming',
+  rsvp: null,
+  guestPass: null
+};
 
-/* ═══════════════════════════════════════════════════════════
-   1. PAGE LOADER
-   style.css defines #loader with opacity:1 by default and
-   a transition on #loader.loader--hidden → opacity:0.
-   JS adds the class on window.load so the page is fully
-   painted before the loader fades out.
-════════════════════════════════════════════════════════════ */
+function safeText(value, max = 80) {
+  return String(value || '')
+    .replace(/[<>\u0000-\u001f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, max);
+}
+
+function isArabic() {
+  return (document.documentElement.lang || '').toLowerCase().startsWith('ar');
+}
+
+function t(ar, en) {
+  return isArabic() ? ar : en;
+}
+
+function getLifecycle(now = Date.now()) {
+  const start = new Date(GARHY_EVENT.startsAt).getTime();
+  const end = new Date(GARHY_EVENT.endsAt).getTime();
+  const finalWindow = GARHY_EVENT.lifecycle.finalHours * 60 * 60 * 1000;
+  const thankYouWindow = GARHY_EVENT.lifecycle.thankYouDays * 24 * 60 * 60 * 1000;
+
+  if (now < start - finalWindow) return 'upcoming';
+  if (now < start) return 'final-countdown';
+  if (now <= end) return 'live';
+  if (now <= end + thankYouWindow) return 'thank-you';
+  return 'archive';
+}
+
+function parseGuestContext() {
+  const params = new URLSearchParams(window.location.search);
+  const name = safeText(params.get('guest') || params.get('name'));
+  const token = safeText(params.get('invite') || params.get('token'), 160);
+
+  state.guestName = name || safeText(localStorage.getItem('garhy-invite:guest-name'));
+  state.inviteToken = token || safeText(localStorage.getItem('garhy-invite:token'), 160);
+
+  if (name) localStorage.setItem('garhy-invite:guest-name', name);
+  if (token) localStorage.setItem('garhy-invite:token', token);
+}
+
+function track(eventName, detail = {}) {
+  const payload = {
+    event: `garhy_invite_${eventName}`,
+    eventId: GARHY_EVENT.id,
+    eventType: GARHY_EVENT.type,
+    lifecycle: state.lifecycle,
+    hasInviteToken: Boolean(state.inviteToken),
+    ...detail
+  };
+
+  window.dataLayer = window.dataLayer || [];
+  window.dataLayer.push(payload);
+  window.dispatchEvent(new CustomEvent('garhy:invite', { detail: payload }));
+}
+
+function injectProductStyles() {
+  if ($('#garhy-invite-product-styles')) return;
+  const style = document.createElement('style');
+  style.id = 'garhy-invite-product-styles';
+  style.textContent = `
+    .garhy-guest-welcome{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 82px);transform:translateX(-50%);z-index:9990;max-width:min(92vw,560px);padding:10px 16px;border:1px solid rgba(255,255,255,.28);border-radius:999px;background:rgba(18,53,46,.88);color:#fff;box-shadow:0 12px 34px rgba(10,34,29,.22);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);font:600 13px/1.5 system-ui,-apple-system,sans-serif;letter-spacing:.01em;text-align:center;opacity:0;animation:garhyWelcome .55s ease .2s forwards}
+    .garhy-lifecycle-card{margin:24px auto 0;max-width:680px;padding:18px 20px;border:1px solid rgba(126,93,64,.18);border-radius:18px;background:rgba(255,255,255,.72);box-shadow:0 18px 44px rgba(25,59,50,.08);backdrop-filter:blur(10px);text-align:center}
+    .garhy-lifecycle-card strong{display:block;margin-bottom:5px;font-size:clamp(18px,3.5vw,24px)}
+    .garhy-lifecycle-card span{display:block;opacity:.76;line-height:1.7}
+    .garhy-smart-dock{position:fixed;left:50%;bottom:calc(14px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:9980;display:none;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;width:min(94vw,430px);padding:7px;border:1px solid rgba(255,255,255,.25);border-radius:22px;background:rgba(18,53,46,.92);box-shadow:0 16px 45px rgba(8,30,25,.3);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);transition:transform .28s ease,opacity .28s ease}
+    .garhy-smart-dock a,.garhy-smart-dock button{min-height:48px;border:0;border-radius:16px;background:transparent;color:#fff;display:flex;align-items:center;justify-content:center;gap:7px;padding:8px 10px;text-decoration:none;font:600 12px/1.2 system-ui,-apple-system,sans-serif;cursor:pointer}
+    .garhy-smart-dock .is-primary{background:#f1e5d4;color:#173d35}
+    .garhy-smart-dock.is-compact{transform:translate(-50%,8px);opacity:.93}
+    .garhy-rsvp-closed{margin:0 0 18px;padding:14px 16px;border-radius:14px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);line-height:1.7;text-align:center}
+    .garhy-pass-code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em}
+    @keyframes garhyWelcome{to{opacity:1;transform:translate(-50%,0)}}
+    @media(max-width:780px){.garhy-smart-dock{display:grid}body{padding-bottom:84px}.mobile-dock{display:none!important}}
+    @media(prefers-reduced-motion:reduce){.garhy-guest-welcome{animation:none;opacity:1}.garhy-smart-dock{transition:none}}
+  `;
+  document.head.appendChild(style);
+}
 
 function initLoader() {
   const loader = $('#loader');
-  if (!loader) {
-    // No loader element — mark page as loaded so hero entrance animations fire
-    document.body.classList.add('is-loaded');
-    return;
-  }
+  const ready = () => document.body.classList.add('is-loaded');
+  if (!loader) return ready();
 
   const dismiss = () => {
     loader.classList.add('loader--hidden');
-    // Remove from DOM after transition, then signal ready for hero entrance
-    const cleanup = () => {
-      if (loader.isConnected) loader.remove();
-      document.body.classList.add('is-loaded');
-    };
-    loader.addEventListener('transitionend', cleanup, { once: true });
-    setTimeout(cleanup, 800); // failsafe if transitionend never fires
+    setTimeout(() => {
+      loader.remove();
+      ready();
+    }, 650);
   };
 
-  if (document.readyState === 'complete') {
-    // Fonts / images already loaded (e.g. hard refresh with cache)
-    dismiss();
-  } else {
-    window.addEventListener('load', dismiss, { once: true });
-    // Hard failsafe: never block the page for more than 6 seconds
-    setTimeout(dismiss, 6000);
-  }
+  if (document.readyState === 'complete') dismiss();
+  else window.addEventListener('load', dismiss, { once: true });
+  setTimeout(dismiss, 5500);
 }
-
-
-/* ═══════════════════════════════════════════════════════════
-   2. STICKY HEADER
-   Adds .is-scrolled to #site-header once the user scrolls
-   past 60 px. style.css handles the visual transition.
-════════════════════════════════════════════════════════════ */
 
 function initHeader() {
-  const header = $('#site-header');
+  const header = $('#site-header') || $('[data-header]');
   if (!header) return;
-
-  const update = () =>
-    header.classList.toggle('is-scrolled', window.scrollY > 60);
-
+  const update = () => header.classList.toggle('is-scrolled', window.scrollY > 48);
   window.addEventListener('scroll', update, { passive: true });
-  update(); // set correct state on first paint
+  update();
 }
 
-
-/* ═══════════════════════════════════════════════════════════
-   3. MOBILE NAVIGATION
-   Toggle .is-open on #site-nav ul via .site-header__menu-toggle.
-   Close on: link click, outside click, Escape key.
-════════════════════════════════════════════════════════════ */
-
-function initMobileNav() {
-  const toggle  = $('.site-header__menu-toggle');
-  const navList = $('#site-nav ul');
-  const header  = $('#site-header');
-  if (!toggle || !navList) return;
-
-  const isOpen = () => toggle.getAttribute('aria-expanded') === 'true';
-
-  const open = () => {
-    toggle.setAttribute('aria-expanded', 'true');
-    navList.classList.add('is-open');
-  };
+function initMobileNavigation() {
+  const toggle = $('.site-header__menu-toggle');
+  const nav = $('#site-nav ul');
+  if (!toggle || !nav) return;
 
   const close = () => {
     toggle.setAttribute('aria-expanded', 'false');
-    navList.classList.remove('is-open');
+    nav.classList.remove('is-open');
   };
 
-  toggle.addEventListener('click', () => (isOpen() ? close() : open()));
-
-  // Close when a nav link is tapped (smooth scroll takes over)
-  $$('a', navList).forEach(a => a.addEventListener('click', close));
-
-  // Close on outside click
-  document.addEventListener('click', e => {
-    if (isOpen() && header && !header.contains(e.target)) close();
-  }, { passive: true });
-
-  // Close on Escape and return focus to toggle
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && isOpen()) {
-      close();
-      toggle.focus();
-    }
+  toggle.addEventListener('click', () => {
+    const open = toggle.getAttribute('aria-expanded') === 'true';
+    toggle.setAttribute('aria-expanded', String(!open));
+    nav.classList.toggle('is-open', !open);
+  });
+  $$('a', nav).forEach(link => link.addEventListener('click', close));
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') close();
   });
 }
 
-
-/* ═══════════════════════════════════════════════════════════
-   4. SMOOTH SCROLL + ACTIVE NAV HIGHLIGHT
-   Smooth-scrolls all anchor links accounting for header height.
-   Uses IntersectionObserver to highlight the current section
-   in the navigation as the user scrolls.
-════════════════════════════════════════════════════════════ */
-
-function initNavigation() {
-  const header   = $('#site-header');
-  const navLinks = $$('#site-nav a[href^="#"]');
-
-  /* ── Smooth scroll ─────────────────────────── */
+function initSmoothNavigation() {
+  const header = $('#site-header') || $('[data-header]');
   $$('a[href^="#"]').forEach(link => {
-    link.addEventListener('click', e => {
+    link.addEventListener('click', event => {
       const id = link.getAttribute('href').slice(1);
-      const target = id ? document.getElementById(id) : null;
+      const target = id && document.getElementById(id);
       if (!target) return;
-      e.preventDefault();
-
-      const headerH = header ? header.offsetHeight : 0;
-      const top     = target.getBoundingClientRect().top + window.scrollY - headerH - 8;
-
+      event.preventDefault();
+      const offset = (header?.offsetHeight || 0) + 10;
+      const top = target.getBoundingClientRect().top + window.scrollY - offset;
       window.scrollTo({ top, behavior: REDUCED_MOTION ? 'auto' : 'smooth' });
+      track('navigation', { target: id });
     });
   });
-
-  /* ── Active nav highlight ──────────────────── */
-  if (!navLinks.length) return;
-
-  const sections = $$('main section[id]');
-  if (!sections.length) return;
-
-  const setActive = id => {
-    navLinks.forEach(a => {
-      const active = a.getAttribute('href') === `#${id}`;
-      a.classList.toggle('is-active', active);
-      // aria-current="page" is semantically incorrect here (not a page);
-      // aria-current="true" signals "current item" in a set.
-      if (active) {
-        a.setAttribute('aria-current', 'true');
-      } else {
-        a.removeAttribute('aria-current');
-      }
-    });
-  };
-
-  // Root margin: slightly above the midpoint so the active state changes
-  // just as the section reaches the upper third of the viewport.
-  const obs = new IntersectionObserver(
-    entries => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) setActive(entry.target.id);
-      });
-    },
-    { rootMargin: '-30% 0px -65% 0px', threshold: 0 }
-  );
-
-  sections.forEach(s => obs.observe(s));
 }
 
-
-/* ═══════════════════════════════════════════════════════════
-   5. SCROLL INDICATOR
-   The hero scroll indicator (.scroll-indicator) fades out once
-   the user has scrolled more than 80 px. CSS owns the animation;
-   JS only adds the class.
-════════════════════════════════════════════════════════════ */
-
-function initScrollIndicator() {
-  const indicator = $('.scroll-indicator');
-  if (!indicator) return;
-
-  const hide = () => {
-    if (window.scrollY > 80) {
-      indicator.classList.add('is-hidden');
-      window.removeEventListener('scroll', hide);
-    }
-  };
-
-  window.addEventListener('scroll', hide, { passive: true });
-}
-
-
-/* ═══════════════════════════════════════════════════════════
-   6. SCROLL REVEAL
-   Observes [data-reveal] elements and adds .is-revealed when
-   they enter the viewport. CSS owns the transition/animation.
-   Respects prefers-reduced-motion.
-════════════════════════════════════════════════════════════ */
-
-function initScrollReveal() {
-  const targets = $$('[data-reveal]');
-  if (!targets.length) return;
-
-  // Reduced motion or no observer support: reveal immediately
+function initReveal() {
+  const items = $$('[data-reveal], .reveal');
+  if (!items.length) return;
   if (REDUCED_MOTION || !('IntersectionObserver' in window)) {
-    targets.forEach(el => el.classList.add('is-revealed'));
+    items.forEach(item => item.classList.add('is-revealed', 'is-visible'));
     return;
   }
-
-  const obs = new IntersectionObserver(
-    entries => {
-      entries.forEach(entry => {
-        if (!entry.isIntersecting) return;
-        const el    = entry.target;
-        const delay = Number(el.dataset.revealDelay ?? 0);
-        setTimeout(() => el.classList.add('is-revealed'), delay);
-        obs.unobserve(el);
-      });
-    },
-    { threshold: 0.10, rootMargin: '0px 0px -48px 0px' }
-  );
-
-  targets.forEach(el => obs.observe(el));
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      entry.target.classList.add('is-revealed', 'is-visible');
+      observer.unobserve(entry.target);
+    });
+  }, { threshold: .1, rootMargin: '0px 0px -42px' });
+  items.forEach(item => observer.observe(item));
 }
 
-
-/* ═══════════════════════════════════════════════════════════
-   7. COUNTDOWN TIMER
-   Target: 31 July 2026, 19:00 Cairo (UTC+2) = 17:00 UTC.
-   Writes padded values into [data-countdown="…"] spans
-   every second. Shows "00" on all units when the date passes.
-════════════════════════════════════════════════════════════ */
-
 function initCountdown() {
-  const container = $('#countdown-timer');
-  if (!container) return;
-
-  // 31 July 2026 at 17:00 UTC = 19:00 Cairo (UTC+2)
-  const TARGET_MS = new Date('2026-07-31T17:00:00Z').getTime();
-
-  const pad = n => String(n).padStart(2, '0');
-
-  // Cache element references — never query inside the interval
-  const units = {
-    days:    $('[data-countdown="days"]',    container),
-    hours:   $('[data-countdown="hours"]',   container),
-    minutes: $('[data-countdown="minutes"]', container),
-    seconds: $('[data-countdown="seconds"]', container),
+  const fields = {
+    days: $('[data-countdown="days"]'),
+    hours: $('[data-countdown="hours"]'),
+    minutes: $('[data-countdown="minutes"]'),
+    seconds: $('[data-countdown="seconds"]')
   };
+  if (!Object.values(fields).some(Boolean)) return;
 
-  // Trigger .countdown-unit--flip on the parent card when a digit changes.
-  // components.css already defines: .countdown-unit--flip .countdown-unit__number
-  // { animation: countFlip var(--duration-fast) … }
-  const flip = el => {
-    if (REDUCED_MOTION || !el) return;
-    const unit = el.closest('.countdown-unit');
-    if (!unit) return;
-    unit.classList.remove('countdown-unit--flip');
-    void unit.offsetWidth; // force reflow so animation restarts each tick
-    unit.classList.add('countdown-unit--flip');
-  };
-
-  // Update text content and flip only when the displayed value actually changes
-  const updateUnit = (el, text) => {
-    if (!el || el.textContent === text) return;
-    el.textContent = text;
-    flip(el);
-  };
-
+  const start = new Date(GARHY_EVENT.startsAt).getTime();
   const tick = () => {
-    const diff     = TARGET_MS - Date.now();
-    const totalSec = Math.max(0, Math.floor(diff / 1000));
-    const d        = Math.floor(totalSec / 86400);
-    const h        = Math.floor((totalSec % 86400) / 3600);
-    const m        = Math.floor((totalSec % 3600) / 60);
-    const s        = totalSec % 60;
-
-    updateUnit(units.days,    pad(d));
-    updateUnit(units.hours,   pad(h));
-    updateUnit(units.minutes, pad(m));
-    updateUnit(units.seconds, pad(s));
+    const seconds = Math.max(0, Math.floor((start - Date.now()) / 1000));
+    const values = {
+      days: Math.floor(seconds / 86400),
+      hours: Math.floor((seconds % 86400) / 3600),
+      minutes: Math.floor((seconds % 3600) / 60),
+      seconds: seconds % 60
+    };
+    Object.entries(values).forEach(([key, value]) => {
+      if (fields[key]) fields[key].textContent = String(value).padStart(2, '0');
+    });
   };
-
-  tick(); // paint immediately on load
+  tick();
   setInterval(tick, 1000);
 }
 
+function showToast(message, type = 'info') {
+  let region = $('#toast-region') || $('[data-toast]');
+  if (!region) {
+    region = document.createElement('div');
+    region.id = 'toast-region';
+    region.setAttribute('role', 'status');
+    region.setAttribute('aria-live', 'polite');
+    document.body.appendChild(region);
+  }
 
-/* ═══════════════════════════════════════════════════════════
-   8. MUSIC PLAYER
-   Toggles the <audio> element via .btn-music.
-   Applies .is-playing and manages aria-pressed + aria-label.
-   Attempts polite autoplay on the first user gesture.
-════════════════════════════════════════════════════════════ */
-
-function initMusicPlayer() {
-  const btn   = $('.btn-music');
-  const audio = $('#music-audio');
-  if (!btn || !audio) return;
-
-  audio.volume = 0.4;
-
-  const setPlaying = playing => {
-    btn.setAttribute('aria-pressed', String(playing));
-    btn.setAttribute(
-      'aria-label',
-      playing ? 'Pause background music' : 'Play background music'
-    );
-    btn.classList.toggle('is-playing', playing);
-  };
-
-  // Sync state from audio events (handles browser-level pause, etc.)
-  audio.addEventListener('play',  () => setPlaying(true));
-  audio.addEventListener('pause', () => setPlaying(false));
-  audio.addEventListener('ended', () => setPlaying(false));
-
-  // Manual toggle
-  btn.addEventListener('click', () => {
-    if (audio.paused) {
-      audio.play().catch(() => {
-        // Autoplay policy blocked — silently ignore
-      });
-    } else {
-      audio.pause();
-    }
-  });
-
-  // Polite autoplay on first page interaction (not the music button itself)
-  let autoplayAttempted = false;
-  const tryAutoplay = e => {
-    if (autoplayAttempted || e.target === btn || btn.contains(e.target)) return;
-    autoplayAttempted = true;
-    audio.play().catch(() => {});
-    document.removeEventListener('click',      tryAutoplay);
-    document.removeEventListener('touchstart', tryAutoplay);
-    document.removeEventListener('keydown',    tryAutoplay);
-  };
-  document.addEventListener('click',      tryAutoplay, { passive: true });
-  document.addEventListener('touchstart', tryAutoplay, { passive: true });
-  document.addEventListener('keydown',    tryAutoplay, { passive: true });
-}
-
-
-/* ═══════════════════════════════════════════════════════════
-   9. TOAST NOTIFICATIONS
-   components.css defines .toast with a toastIn CSS animation
-   (plays automatically on append) and .toast--exit triggers
-   the toastOut animation before removal.
-   Call showToast() from anywhere in this file.
-════════════════════════════════════════════════════════════ */
-
-/**
- * Display a toast notification.
- * @param {string} message   - Text to display.
- * @param {'success'|'error'|'info'} [type='success']
- * @param {number} [duration=3500]  - Milliseconds before auto-dismiss.
- */
-function showToast(message, type = 'success', duration = 3500) {
-  const region = $('#toast-region');
-  if (!region) return;
+  if (region.matches('[data-toast]')) {
+    region.textContent = message;
+    region.hidden = false;
+    region.classList.add('is-visible');
+    setTimeout(() => region.classList.remove('is-visible'), 3000);
+    return;
+  }
 
   const toast = document.createElement('div');
-  toast.className   = `toast toast--${type}`;
+  toast.className = `toast toast--${type}`;
   toast.textContent = message;
-  toast.setAttribute('role', 'status');
-
   region.appendChild(toast);
-
-  // Dismiss: add exit class → CSS plays toastOut → remove from DOM
-  const dismiss = () => {
-    toast.classList.add('toast--exit');
-    const cleanup = () => toast.isConnected && toast.remove();
-    toast.addEventListener('animationend', cleanup, { once: true });
-    setTimeout(cleanup, 500); // failsafe
-  };
-
-  setTimeout(dismiss, duration);
+  setTimeout(() => toast.remove(), 3500);
 }
 
+async function shareInvite() {
+  const title = `${GARHY_EVENT.title} — ${GARHY_EVENT.product}`;
+  const text = t('دعوة خاصة لمشاركة هذه المناسبة', 'A private invitation to celebrate this occasion');
+  const url = new URL(window.location.href);
+  url.searchParams.delete('guest');
+  url.searchParams.delete('name');
 
-/* ═══════════════════════════════════════════════════════════
-   10. MODAL  (Share sheet — #global-modal)
-   components.css shows the modal when .is-open is present or
-   aria-hidden is "false". Focus is trapped inside while open
-   and restored to the trigger element on close.
-════════════════════════════════════════════════════════════ */
-
-(function initModals() {
-  const modal = $('#global-modal');
-  if (!modal) return;
-
-  let prevFocus = null;
-
-  /* ── Focus trap ─────────────────────────── */
-  const FOCUSABLE = 'a[href],button:not([disabled]),input,select,textarea,[tabindex]:not([tabindex="-1"])';
-
-  const trapFocus = e => {
-    if (e.key !== 'Tab') return;
-    const focusable = $$(':is(' + FOCUSABLE + ')', modal).filter(el => !el.hidden && el.offsetParent !== null);
-    if (!focusable.length) return;
-
-    const first = focusable[0];
-    const last  = focusable[focusable.length - 1];
-
-    if (e.shiftKey && document.activeElement === first) {
-      e.preventDefault(); last.focus();
-    } else if (!e.shiftKey && document.activeElement === last) {
-      e.preventDefault(); first.focus();
+  try {
+    if (navigator.share) {
+      await navigator.share({ title, text, url: url.toString() });
+    } else if (navigator.clipboard) {
+      await navigator.clipboard.writeText(url.toString());
+      showToast(t('تم نسخ رابط الدعوة', 'Invitation link copied'));
     }
-  };
+    track('share');
+  } catch (error) {
+    if (error?.name !== 'AbortError') showToast(t('تعذرت المشاركة', 'Could not share'), 'error');
+  }
+}
 
-  /* ── Open ───────────────────────────────── */
-  const openModal = () => {
-    prevFocus = document.activeElement;
-    modal.setAttribute('aria-hidden', 'false');
-    modal.classList.add('is-open');
-    document.body.classList.add('modal-open');
-    modal.addEventListener('keydown', trapFocus);
-
-    // Focus the close button
-    const closeBtn = $('[data-modal-close]', modal);
-    if (closeBtn) requestAnimationFrame(() => closeBtn.focus());
-  };
-
-  /* ── Close ──────────────────────────────── */
-  const closeModal = () => {
-    modal.setAttribute('aria-hidden', 'true');
-    modal.classList.remove('is-open');
-    document.body.classList.remove('modal-open');
-    modal.removeEventListener('keydown', trapFocus);
-
-    if (prevFocus && typeof prevFocus.focus === 'function') {
-      prevFocus.focus();
-      prevFocus = null;
-    }
-  };
-
-  // Open triggers (data-modal-open attribute)
-  $$('[data-modal-open]').forEach(btn => btn.addEventListener('click', openModal));
-
-  // Close triggers: × button and backdrop both carry data-modal-close
-  $$('[data-modal-close]', modal).forEach(el => el.addEventListener('click', closeModal));
-
-  // Escape key
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && modal.classList.contains('is-open')) closeModal();
-  });
-})();
-
-
-/* ═══════════════════════════════════════════════════════════
-   11. CLIPBOARD COPY
-   Writes window.location.href to the clipboard when a
-   [data-copy-link] button is clicked. Falls back to
-   document.execCommand for older browsers.
-════════════════════════════════════════════════════════════ */
-
-function initClipboard() {
-  $$('[data-copy-link]').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const url = window.location.href;
-
-      try {
-        await navigator.clipboard.writeText(url);
-        showToast('Invitation link copied! ✨');
-      } catch {
-        // Fallback for browsers without clipboard API
-        const ta = document.createElement('textarea');
-        ta.value           = url;
-        ta.style.cssText   = 'position:fixed;inset:0 0 auto auto;opacity:0;pointer-events:none;';
-        document.body.appendChild(ta);
-        ta.focus();
-        ta.select();
-        try {
-          document.execCommand('copy');
-          showToast('Invitation link copied! ✨');
-        } catch {
-          showToast('Could not copy link — please copy manually.', 'error');
-        }
-        document.body.removeChild(ta);
-      }
+function initShareActions() {
+  $$('[data-share-invitation], [data-copy-link]').forEach(button => {
+    button.addEventListener('click', event => {
+      event.preventDefault();
+      shareInvite();
     });
   });
+
+  const modal = $('#global-modal');
+  $$('[data-modal-close]').forEach(button => button.addEventListener('click', () => {
+    if (!modal) return;
+    modal.classList.remove('is-open');
+    modal.setAttribute('aria-hidden', 'true');
+  }));
 }
 
+function initMusic() {
+  const audio = $('#music-audio') || $('[data-music-audio]');
+  const button = $('.btn-music') || $('[data-music-toggle]');
+  if (!audio || !button) return;
 
-/* ═══════════════════════════════════════════════════════════
-   12. GALLERY LIGHTBOX
-   Builds a full-screen lightbox overlay on first call.
-   Supports: click to open, prev/next, keyboard (←→ Esc),
-   backdrop click to close, focus management, ARIA.
-════════════════════════════════════════════════════════════ */
+  audio.volume = .55;
+  const sync = () => {
+    const playing = !audio.paused;
+    button.classList.toggle('is-playing', playing);
+    button.setAttribute('aria-pressed', String(playing));
+  };
+  button.addEventListener('click', async () => {
+    try {
+      if (audio.paused) await audio.play();
+      else audio.pause();
+    } catch {
+      showToast(t('تعذر تشغيل الموسيقى على هذا الجهاز', 'Audio could not be played'), 'error');
+    }
+  });
+  audio.addEventListener('play', sync);
+  audio.addEventListener('pause', sync);
+  sync();
+}
 
 function initGallery() {
-  const items = $$('.gallery-item');
-  if (!items.length) return;
+  const items = $$('.gallery-item, [data-gallery-index]');
+  const dialog = $('[data-lightbox]');
+  if (!items.length || !dialog || !dialog.showModal) return;
 
-  /* ── Build overlay DOM ──────────────────── */
-  const lb = document.createElement('div');
-  lb.id = 'lightbox';
-  lb.setAttribute('role',       'dialog');
-  lb.setAttribute('aria-modal', 'true');
-  lb.setAttribute('aria-label', 'Photo viewer');
-  lb.setAttribute('aria-hidden','true');
-  lb.innerHTML = /* html */ `
-    <div class="lightbox__backdrop"></div>
-    <div class="lightbox__stage">
-      <button type="button" class="lightbox__close" aria-label="Close photo viewer">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-             stroke-width="2" stroke-linecap="round" aria-hidden="true">
-          <line x1="18" y1="6"  x2="6"  y2="18"/>
-          <line x1="6"  y1="6"  x2="18" y2="18"/>
-        </svg>
-      </button>
-      <button type="button" class="lightbox__prev" aria-label="Previous photo">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-             stroke-width="2" stroke-linecap="round" aria-hidden="true">
-          <polyline points="15 18 9 12 15 6"/>
-        </svg>
-      </button>
-      <button type="button" class="lightbox__next" aria-label="Next photo">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-             stroke-width="2" stroke-linecap="round" aria-hidden="true">
-          <polyline points="9 18 15 12 9 6"/>
-        </svg>
-      </button>
-      <div  class="lightbox__media" aria-live="polite" aria-atomic="true"></div>
-      <p    class="lightbox__caption"></p>
-    </div>
-  `;
-  document.body.appendChild(lb);
+  const image = $('[data-lightbox-image]', dialog);
+  const caption = $('[data-lightbox-caption]', dialog);
+  let active = 0;
 
-  const mediaEl   = lb.querySelector('.lightbox__media');
-  const captionEl = lb.querySelector('.lightbox__caption');
-  const closeBtn  = lb.querySelector('.lightbox__close');
-  const prevBtn   = lb.querySelector('.lightbox__prev');
-  const nextBtn   = lb.querySelector('.lightbox__next');
-  const backdrop  = lb.querySelector('.lightbox__backdrop');
-
-  let current   = 0;
-  let prevFocus = null;
-
-  /* ── Render a specific item ─────────────── */
-  const render = idx => {
-    const item = items[idx];
-    const img  = item.querySelector('img');
-    const cap  = item.querySelector('.gallery-item__caption');
-
-    mediaEl.innerHTML = '';
-
-    if (img) {
-      const clone = img.cloneNode(true);
-      clone.className = 'lightbox__img';
-      clone.setAttribute('alt', img.alt || (cap ? cap.textContent.trim() : ''));
-      mediaEl.appendChild(clone);
-    } else {
-      // Gradient placeholder — mirrors .gallery-item__img nth-child styling
-      const ph = document.createElement('div');
-      ph.className = `lightbox__placeholder lightbox__placeholder--${idx + 1}`;
-      mediaEl.appendChild(ph);
-    }
-
-    captionEl.textContent = cap ? cap.textContent.trim() : '';
-
-    // Update prev/next disabled state for single-item galleries
-    prevBtn.disabled = items.length < 2;
-    nextBtn.disabled = items.length < 2;
+  const render = index => {
+    active = (index + items.length) % items.length;
+    const source = $('img', items[active]);
+    if (!source || !image) return;
+    image.src = source.currentSrc || source.src;
+    image.alt = source.alt || '';
+    if (caption) caption.textContent = $('figcaption, span', items[active])?.textContent || '';
   };
 
-  /* ── Open ───────────────────────────────── */
-  const open = idx => {
-    prevFocus = document.activeElement;
-    current   = clamp(idx, 0, items.length - 1);
-    render(current);
-    lb.setAttribute('aria-hidden', 'false');
-    lb.classList.add('is-open');
-    document.body.classList.add('modal-open');
-    closeBtn.focus();
-  };
-
-  /* ── Close ──────────────────────────────── */
-  const close = () => {
-    lb.setAttribute('aria-hidden', 'true');
-    lb.classList.remove('is-open');
-    document.body.classList.remove('modal-open');
-    if (prevFocus && typeof prevFocus.focus === 'function') {
-      prevFocus.focus();
-      prevFocus = null;
-    }
-  };
-
-  const prev = () => { current = (current - 1 + items.length) % items.length; render(current); };
-  const next = () => { current = (current + 1)                % items.length; render(current); };
-
-  /* ── Wire gallery items ─────────────────── */
-  items.forEach((item, i) => {
-    item.addEventListener('click',   ()  => open(i));
-    item.addEventListener('keydown', e   => {
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(i); }
-    });
-  });
-
-  /* ── Wire lightbox controls ─────────────── */
-  closeBtn.addEventListener('click', close);
-  prevBtn .addEventListener('click', prev);
-  nextBtn .addEventListener('click', next);
-  backdrop.addEventListener('click', close);
-
-  /* ── Keyboard navigation ────────────────── */
-  document.addEventListener('keydown', e => {
-    if (!lb.classList.contains('is-open')) return;
-    if (e.key === 'Escape')     { close(); }
-    if (e.key === 'ArrowLeft')  { e.preventDefault(); prev(); }
-    if (e.key === 'ArrowRight') { e.preventDefault(); next(); }
-  });
+  items.forEach((item, index) => item.addEventListener('click', () => {
+    render(index);
+    dialog.showModal();
+    track('gallery_open', { index });
+  }));
+  $('[data-lightbox-close]', dialog)?.addEventListener('click', () => dialog.close());
+  $('[data-lightbox-prev]', dialog)?.addEventListener('click', () => render(active - 1));
+  $('[data-lightbox-next]', dialog)?.addEventListener('click', () => render(active + 1));
 }
 
+function createGuestPass(name) {
+  const seed = `${GARHY_EVENT.id}|${state.inviteToken}|${name}|${Date.now()}`;
+  let hash = 2166136261;
+  for (let i = 0; i < seed.length; i += 1) {
+    hash ^= seed.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  const code = `GT-${Math.abs(hash >>> 0).toString(36).toUpperCase().padStart(7, '0')}`;
+  const pass = { code, eventId: GARHY_EVENT.id, guestName: name, createdAt: new Date().toISOString() };
+  localStorage.setItem('garhy-invite:guest-pass', JSON.stringify(pass));
+  return pass;
+}
 
-/* ═══════════════════════════════════════════════════════════
-   13. RSVP FORM — Validation + Submission
-   Validates required fields inline (on blur + on submit).
-   POSTs to form.action via fetch if an endpoint is set;
-   otherwise enters demo mode and shows the success state.
-   No endpoint is configured yet — client must supply one
-   (e.g. Formspree, EmailJS, Google Sheets webhook).
-════════════════════════════════════════════════════════════ */
-
-function initRSVP() {
-  const form    = $('#rsvp-form');
-  const success = $('#rsvp-success');
+function initRsvp() {
+  const form = $('#rsvp-form');
   if (!form) return;
 
-  /* ── Field references ───────────────────── */
-  const nameInput   = $('#rsvp-name');
-  const nameErr     = $('#rsvp-name-error');
-  const guestsInput = $('#rsvp-guests');
-  const guestsErr   = $('#rsvp-guests-error');
-  const summary     = $('#rsvp-validation-summary');
-  const submitBtn   = form.querySelector('[type="submit"]');
+  const existing = localStorage.getItem('garhy-invite:rsvp');
+  try { state.rsvp = existing ? JSON.parse(existing) : null; } catch { state.rsvp = null; }
+  try { state.guestPass = JSON.parse(localStorage.getItem('garhy-invite:guest-pass') || 'null'); } catch { state.guestPass = null; }
 
-  /* ── Inline helpers ─────────────────────── */
-  const setErr = (input, errEl, msg) => {
-    if (!input) return;
-    input.setAttribute('aria-invalid', msg ? 'true' : 'false');
-    if (errEl) errEl.textContent = msg;
-  };
-
-  const clearErr = (input, errEl) => setErr(input, errEl, '');
-
-  const validateName = () => {
-    const v = nameInput ? nameInput.value.trim() : '';
-    if (!v) { setErr(nameInput, nameErr, 'Please enter your full name.'); return false; }
-    clearErr(nameInput, nameErr);
-    return true;
-  };
-
-  const validateGuests = () => {
-    const v = guestsInput ? parseInt(guestsInput.value, 10) : 1;
-    if (isNaN(v) || v < 1) {
-      setErr(guestsInput, guestsErr, 'Please enter at least 1 guest.');
-      return false;
-    }
-    if (v > 10) {
-      setErr(guestsInput, guestsErr, 'Maximum 10 guests per RSVP.');
-      return false;
-    }
-    clearErr(guestsInput, guestsErr);
-    return true;
-  };
-
-  /* ── Live validation (blur) ─────────────── */
-  if (nameInput) {
-    nameInput.addEventListener('blur',  validateName);
-    nameInput.addEventListener('input', () => clearErr(nameInput, nameErr));
-  }
-  if (guestsInput) {
-    guestsInput.addEventListener('blur',  validateGuests);
-    guestsInput.addEventListener('input', () => clearErr(guestsInput, guestsErr));
+  if (['thank-you', 'archive'].includes(state.lifecycle)) {
+    const note = document.createElement('div');
+    note.className = 'garhy-rsvp-closed';
+    note.innerHTML = `<strong>${t('شكرًا لمشاركتكم فرحتنا', 'Thank you for celebrating with us')}</strong><br>${t('انتهت فترة تأكيد الحضور لهذه المناسبة.', 'RSVP for this event is now closed.')}`;
+    form.prepend(note);
+    $$('input, select, textarea, button[type="submit"]', form).forEach(control => { control.disabled = true; });
+    return;
   }
 
-  /* ── Submit ─────────────────────────────── */
-  form.addEventListener('submit', async e => {
-    e.preventDefault();
-
-    const nameOk   = validateName();
-    const guestsOk = validateGuests();
-
-    if (!nameOk || !guestsOk) {
-      if (summary) summary.textContent = 'Please correct the highlighted fields and try again.';
-      const firstInvalid = form.querySelector('[aria-invalid="true"]');
-      if (firstInvalid) firstInvalid.focus();
+  form.addEventListener('submit', event => {
+    event.preventDefault();
+    const data = new FormData(form);
+    const name = safeText(data.get('name') || data.get('guest_name'), 100);
+    if (!name) {
+      showToast(t('يرجى كتابة الاسم', 'Please enter your name'), 'error');
       return;
     }
 
-    if (summary) summary.textContent = '';
+    const attendance = safeText(data.get('attendance') || 'attending', 20);
+    const payload = {
+      eventId: GARHY_EVENT.id,
+      guestName: name,
+      attendance,
+      guests: Number(data.get('guests') || 1),
+      message: safeText(data.get('message'), 500),
+      submittedAt: new Date().toISOString()
+    };
 
-    // Disable submit button while in flight
-    if (submitBtn) {
-      submitBtn.disabled     = true;
-      submitBtn.textContent  = 'Sending…';
-    }
+    state.rsvp = payload;
+    localStorage.setItem('garhy-invite:rsvp', JSON.stringify(payload));
+    if (attendance !== 'declining') state.guestPass = createGuestPass(name);
 
-    const action = (form.getAttribute('action') || '').trim();
-    const isDemo = !action || action === window.location.href || action === '#';
+    showToast(t('تم تسجيل ردك بنجاح', 'Your RSVP has been saved'), 'success');
+    track('rsvp_submit', { attendance, guestCount: payload.guests });
 
-    if (isDemo) {
-      // No endpoint yet — demo mode
-      setTimeout(showSuccess, 900);
-      return;
-    }
-
-    try {
-      const res = await fetch(action, {
-        method:  'POST',
-        body:    new FormData(form),
-        headers: { Accept: 'application/json' },
-      });
-
-      if (res.ok) {
-        showSuccess();
-      } else {
-        throw new Error(`Server responded ${res.status}`);
-      }
-    } catch (err) {
-      showToast('Could not send your RSVP. Please try again.', 'error');
-      if (submitBtn) {
-        submitBtn.disabled    = false;
-        submitBtn.textContent = 'Send RSVP';
+    const success = $('#rsvp-success') || $('[data-rsvp-success]');
+    if (success) {
+      form.hidden = true;
+      success.hidden = false;
+      success.removeAttribute('aria-hidden');
+      const codeHost = document.createElement('p');
+      if (state.guestPass) {
+        codeHost.innerHTML = `${t('رمز بطاقة الضيف', 'Guest pass')}: <strong class="garhy-pass-code">${state.guestPass.code}</strong>`;
+        success.appendChild(codeHost);
       }
     }
   });
+}
 
-  /* ── Show success state ─────────────────── */
-  function showSuccess() {
-    form.classList.add('is-hidden');
-    form.setAttribute('aria-hidden', 'true');
-
-    if (success) {
-      success.classList.remove('is-hidden');
-      success.setAttribute('aria-hidden', 'false');
-      // Move focus to success message for screen readers
-      success.setAttribute('tabindex', '-1');
-      success.focus();
-    }
+function lifecycleCopy() {
+  switch (state.lifecycle) {
+    case 'final-countdown':
+      return {
+        title: t('اقترب موعدنا', 'Almost time'),
+        body: t('راجع تفاصيل المكان وموعد الوصول قبل انطلاق ليلة العمر.', 'Review the venue and arrival details before the celebration begins.')
+      };
+    case 'live':
+      return {
+        title: t('اليوم موعدنا', 'Today is the day'),
+        body: t('يسعدنا وجودكم معنا. استخدم زر المكان للوصول مباشرة.', 'We are delighted to have you with us. Use Venue for directions.')
+      };
+    case 'thank-you':
+      return {
+        title: t('شكرًا من القلب', 'Thank you'),
+        body: t('وجودكم جعل الذكرى أجمل. تبقى هذه الدعوة مساحة للاحتفاظ باللحظات.', 'Your presence made the memory even more special. This invitation now preserves the moments.')
+      };
+    case 'archive':
+      return {
+        title: t('ذكرى محفوظة', 'A preserved memory'),
+        body: t('تحولت الدعوة إلى صفحة تذكارية للمناسبة.', 'The invitation is now a permanent event keepsake.')
+      };
+    default:
+      return {
+        title: t('يسعدنا أن تكونوا معنا', 'We would love to celebrate with you'),
+        body: t('يمكنكم مراجعة التفاصيل وتأكيد الحضور من هذه الدعوة.', 'Review the details and confirm attendance from this invitation.')
+      };
   }
 }
 
+function initLifecycleExperience() {
+  state.lifecycle = getLifecycle();
+  document.documentElement.dataset.eventLifecycle = state.lifecycle;
 
-/* ═══════════════════════════════════════════════════════════
-   BOOTSTRAP
-   Script is loaded with `defer` so the DOM is always ready
-   when this executes. Init order mirrors visual hierarchy.
-════════════════════════════════════════════════════════════ */
+  const hero = $('#hero') || $('main section');
+  if (hero && !$('.garhy-lifecycle-card', hero)) {
+    const copy = lifecycleCopy();
+    const card = document.createElement('div');
+    card.className = 'garhy-lifecycle-card';
+    card.innerHTML = `<strong>${copy.title}</strong><span>${copy.body}</span>`;
+    const inner = $('.hero__content, .hero__copy, .section__inner', hero) || hero;
+    inner.appendChild(card);
+  }
 
-document.addEventListener('DOMContentLoaded', () => {
+  track('lifecycle_view');
+}
+
+function initGuestPersonalization() {
+  if (!state.guestName) return;
+  const welcome = document.createElement('div');
+  welcome.className = 'garhy-guest-welcome';
+  welcome.setAttribute('role', 'status');
+  welcome.textContent = t(`أهلًا ${state.guestName} — هذه الدعوة أُعدت لك`, `Welcome ${state.guestName} — this invitation is for you`);
+  document.body.appendChild(welcome);
+  setTimeout(() => welcome.remove(), 7000);
+  track('personalized_view');
+}
+
+function initSmartDock() {
+  if ($('.garhy-smart-dock')) return;
+  const dock = document.createElement('nav');
+  dock.className = 'garhy-smart-dock';
+  dock.setAttribute('aria-label', t('إجراءات سريعة', 'Quick actions'));
+
+  const thirdAction = ['thank-you', 'archive'].includes(state.lifecycle)
+    ? `<button type="button" class="is-primary" data-garhy-share>↗ <span>${t('مشاركة', 'Share')}</span></button>`
+    : `<a class="is-primary" href="#rsvp">♥ <span>${t('الحضور', 'RSVP')}</span></a>`;
+
+  dock.innerHTML = `
+    <a href="#the-event">✦ <span>${t('التفاصيل', 'Details')}</span></a>
+    <a href="#location">⌖ <span>${t('المكان', 'Venue')}</span></a>
+    ${thirdAction}
+  `;
+  document.body.appendChild(dock);
+  $('[data-garhy-share]', dock)?.addEventListener('click', shareInvite);
+
+  let lastY = window.scrollY;
+  window.addEventListener('scroll', () => {
+    const currentY = window.scrollY;
+    dock.classList.toggle('is-compact', currentY > lastY && currentY > 160);
+    lastY = currentY;
+  }, { passive: true });
+}
+
+function initMapsTracking() {
+  $$('a[href*="maps"], a[href*="google.com/maps"]').forEach(link => {
+    link.addEventListener('click', () => track('venue_open'));
+  });
+}
+
+function initAccessibility() {
+  document.addEventListener('keydown', event => {
+    if (event.key !== 'Escape') return;
+    const dialog = $('dialog[open]');
+    if (dialog?.close) dialog.close();
+  });
+}
+
+function boot() {
+  parseGuestContext();
+  state.lifecycle = getLifecycle();
+  injectProductStyles();
   initLoader();
   initHeader();
-  initMobileNav();
-  initNavigation();
-  initScrollIndicator();
-  initScrollReveal();
+  initMobileNavigation();
+  initSmoothNavigation();
+  initReveal();
   initCountdown();
-  initMusicPlayer();
-  // initModals is an IIFE — already executed at parse time
-  initClipboard();
+  initMusic();
   initGallery();
-  initRSVP();
-});
+  initShareActions();
+  initLifecycleExperience();
+  initGuestPersonalization();
+  initSmartDock();
+  initRsvp();
+  initMapsTracking();
+  initAccessibility();
+
+  window.GARHY_INVITE = Object.freeze({
+    event: GARHY_EVENT,
+    getLifecycle,
+    getGuestPass: () => state.guestPass,
+    getRsvp: () => state.rsvp,
+    track,
+    version: '1.0.0-productization'
+  });
+
+  track('boot', { personalized: Boolean(state.guestName) });
+}
+
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });
+else boot();
