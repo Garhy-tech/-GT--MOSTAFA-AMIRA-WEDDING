@@ -77,12 +77,51 @@ jobs:
           url="$(npx --yes vercel@latest deploy --yes --cwd "$RELEASE_DIR" --token="$VERCEL_TOKEN" | tail -n 1)"
           echo "url=$url" >> "$GITHUB_OUTPUT"
           printf '%s\n' "$url" > vercel-preview-url.txt
+
+      - name: Verify protected V2 preview
+        if: steps.preflight.outputs.ready == 'true'
+        shell: bash
+        env:
+          PREVIEW_URL: ${{ steps.deploy.outputs.url }}
+        run: |
+          set -euo pipefail
+
+          npx --yes vercel@latest curl / --deployment "$PREVIEW_URL" --token="$VERCEL_TOKEN" > /tmp/garhy-root.html
+          grep -Fq 'data-garhy-invite' /tmp/garhy-root.html
+          grep -Fq 'A GARHY INVITE Experience' /tmp/garhy-root.html
+          if grep -Fq 'Royal Garden Palace' /tmp/garhy-root.html; then
+            echo 'Legacy root detected unexpectedly.' >&2
+            exit 1
+          fi
+
+          npx --yes vercel@latest curl /app-v2/event.json --deployment "$PREVIEW_URL" --token="$VERCEL_TOKEN" > /tmp/garhy-event.json
+          grep -Fq '"slug": "mostafa-amira-2026"' /tmp/garhy-event.json
+          grep -Fq '"assetOrigin": "/assets/v2"' /tmp/garhy-event.json
+
+          npx --yes vercel@latest curl /platform/runtime/core.js --deployment "$PREVIEW_URL" --token="$VERCEL_TOKEN" > /tmp/garhy-core.js
+          grep -Fq 'GarhyInviteCore' /tmp/garhy-core.js
+
+          npx --yes vercel@latest curl /i/GARHYQAROUTETEST0123456789abcdef --deployment "$PREVIEW_URL" --token="$VERCEL_TOKEN" > /tmp/garhy-personal.html
+          grep -Fq 'data-garhy-invite' /tmp/garhy-personal.html
+          grep -Fq 'A GARHY INVITE Experience' /tmp/garhy-personal.html
+
+          npx --yes vercel@latest curl /assets/v2/images/hero/hero-wedding-story.jpg --deployment "$PREVIEW_URL" --token="$VERCEL_TOKEN" > /tmp/garhy-hero.jpg
+          test "$(wc -c < /tmp/garhy-hero.jpg)" -gt 10000
+
+          npx --yes vercel@latest curl /assets/v2/audio/daweta-zewace.mp3 --deployment "$PREVIEW_URL" --token="$VERCEL_TOKEN" > /tmp/garhy-audio.mp3
+          test "$(wc -c < /tmp/garhy-audio.mp3)" -gt 10000
+
           {
             echo '## GARHY INVITE Vercel Preview'
             echo
-            echo "Deployment: $url"
+            echo "Deployment: $PREVIEW_URL"
             echo
-            echo 'Source: direct static V2-only release directory.'
+            echo '✅ Root serves GARHY INVITE V2.'
+            echo '✅ Personalized `/i/:token` route serves GARHY INVITE V2.'
+            echo '✅ Event config and runtime are reachable.'
+            echo '✅ Hero media and wedding audio are reachable.'
+            echo '✅ Legacy root signature was not detected.'
+            echo
             echo 'Target: isolated `garhy-invite-v2-preview` project. Production aliases and GARHY domains were not modified.'
           } >> "$GITHUB_STEP_SUMMARY"
 
