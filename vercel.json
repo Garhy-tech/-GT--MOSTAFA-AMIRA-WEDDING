@@ -3,8 +3,8 @@
   "cleanUrls": true,
   "trailingSlash": false,
   "rewrites": [
-    { "source": "/i/:token", "destination": "/app-v2/index.html" },
-    { "source": "/", "destination": "/app-v2/index.html" }
+    { "source": "/i/:token", "destination": "/app-v2/index" },
+    { "source": "/", "destination": "/app-v2/index" }
   ],
   "headers": [
     {
@@ -14,7 +14,7 @@
         { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
         { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=()" },
         { "key": "X-Frame-Options", "value": "DENY" },
-        { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://mostafa-amira-2026-rbi4w8d0t-garhy.vercel.app; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://mostafa-amira-2026-rbi4w8d0t-garhy.vercel.app; media-src 'self' https://mostafa-amira-2026-rbi4w8d0t-garhy.vercel.app; connect-src 'self' https://zuvcvsrmrhgybgwkuvfo.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'" }
+        { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://mostafa-amira-2026-rbi4w8d0t-garhy.vercel.app; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://mostafa-amira-2026-rbi4w8d0t-garhy.vercel.app; media-src 'self' https://mostafa-amira-2026-rbi4w8d0t-garhy.vercel.app; connect-src 'self' https://zuvcvsrmrhgybgwkuvfo.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" }
       ]
     }
   ]
