@@ -1,10 +1,6 @@
 /*!
  * GARHY INVITE — Mostafa & Amira flagship experience
- * Productization layer v1.0
- *
- * This file intentionally keeps the legacy static site deployable while
- * introducing reusable event lifecycle, guest personalization, smart mobile
- * actions, RSVP state, guest-pass primitives and lightweight analytics.
+ * Productization layer v1.1
  */
 
 'use strict';
@@ -30,10 +26,7 @@ const GARHY_EVENT = Object.freeze({
     cityAr: 'القاهرة',
     mapsUrl: 'https://maps.app.goo.gl/BzxKEpQVtUCoLMjm7?g_st=afm'
   },
-  lifecycle: {
-    finalHours: 72,
-    thankYouDays: 30
-  }
+  lifecycle: { finalHours: 72, thankYouDays: 30 }
 });
 
 const state = {
@@ -105,7 +98,7 @@ function injectProductStyles() {
   const style = document.createElement('style');
   style.id = 'garhy-invite-product-styles';
   style.textContent = `
-    .garhy-guest-welcome{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 82px);transform:translateX(-50%);z-index:9990;max-width:min(92vw,560px);padding:10px 16px;border:1px solid rgba(255,255,255,.28);border-radius:999px;background:rgba(18,53,46,.88);color:#fff;box-shadow:0 12px 34px rgba(10,34,29,.22);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);font:600 13px/1.5 system-ui,-apple-system,sans-serif;letter-spacing:.01em;text-align:center;opacity:0;animation:garhyWelcome .55s ease .2s forwards}
+    .garhy-guest-welcome{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 82px);transform:translateX(-50%);z-index:9990;max-width:min(92vw,560px);padding:10px 16px;border:1px solid rgba(255,255,255,.28);border-radius:999px;background:rgba(18,53,46,.88);color:#fff;box-shadow:0 12px 34px rgba(10,34,29,.22);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);font:600 13px/1.5 system-ui,-apple-system,sans-serif;text-align:center;opacity:0;animation:garhyWelcome .55s ease .2s forwards}
     .garhy-lifecycle-card{margin:24px auto 0;max-width:680px;padding:18px 20px;border:1px solid rgba(126,93,64,.18);border-radius:18px;background:rgba(255,255,255,.72);box-shadow:0 18px 44px rgba(25,59,50,.08);backdrop-filter:blur(10px);text-align:center}
     .garhy-lifecycle-card strong{display:block;margin-bottom:5px;font-size:clamp(18px,3.5vw,24px)}
     .garhy-lifecycle-card span{display:block;opacity:.76;line-height:1.7}
@@ -127,7 +120,10 @@ function initLoader() {
   const ready = () => document.body.classList.add('is-loaded');
   if (!loader) return ready();
 
+  let dismissed = false;
   const dismiss = () => {
+    if (dismissed) return;
+    dismissed = true;
     loader.classList.add('loader--hidden');
     setTimeout(() => {
       loader.remove();
@@ -261,9 +257,8 @@ async function shareInvite() {
   url.searchParams.delete('name');
 
   try {
-    if (navigator.share) {
-      await navigator.share({ title, text, url: url.toString() });
-    } else if (navigator.clipboard) {
+    if (navigator.share) await navigator.share({ title, text, url: url.toString() });
+    else if (navigator.clipboard) {
       await navigator.clipboard.writeText(url.toString());
       showToast(t('تم نسخ رابط الدعوة', 'Invitation link copied'));
     }
@@ -354,12 +349,15 @@ function createGuestPass(name) {
   return pass;
 }
 
+function isAttendingValue(value) {
+  return ['accept', 'attending', 'yes', 'true', '1'].includes(String(value).toLowerCase());
+}
+
 function initRsvp() {
   const form = $('#rsvp-form');
   if (!form) return;
 
-  const existing = localStorage.getItem('garhy-invite:rsvp');
-  try { state.rsvp = existing ? JSON.parse(existing) : null; } catch { state.rsvp = null; }
+  try { state.rsvp = JSON.parse(localStorage.getItem('garhy-invite:rsvp') || 'null'); } catch { state.rsvp = null; }
   try { state.guestPass = JSON.parse(localStorage.getItem('garhy-invite:guest-pass') || 'null'); } catch { state.guestPass = null; }
 
   if (['thank-you', 'archive'].includes(state.lifecycle)) {
@@ -380,7 +378,7 @@ function initRsvp() {
       return;
     }
 
-    const attendance = safeText(data.get('attendance') || 'attending', 20);
+    const attendance = safeText(data.get('attendance') || 'accept', 20);
     const payload = {
       eventId: GARHY_EVENT.id,
       guestName: name,
@@ -392,7 +390,8 @@ function initRsvp() {
 
     state.rsvp = payload;
     localStorage.setItem('garhy-invite:rsvp', JSON.stringify(payload));
-    if (attendance !== 'declining') state.guestPass = createGuestPass(name);
+    state.guestPass = isAttendingValue(attendance) ? createGuestPass(name) : null;
+    if (!state.guestPass) localStorage.removeItem('garhy-invite:guest-pass');
 
     showToast(t('تم تسجيل ردك بنجاح', 'Your RSVP has been saved'), 'success');
     track('rsvp_submit', { attendance, guestCount: payload.guests });
@@ -402,8 +401,8 @@ function initRsvp() {
       form.hidden = true;
       success.hidden = false;
       success.removeAttribute('aria-hidden');
-      const codeHost = document.createElement('p');
-      if (state.guestPass) {
+      if (state.guestPass && !$('.garhy-pass-code', success)) {
+        const codeHost = document.createElement('p');
         codeHost.innerHTML = `${t('رمز بطاقة الضيف', 'Guest pass')}: <strong class="garhy-pass-code">${state.guestPass.code}</strong>`;
         success.appendChild(codeHost);
       }
@@ -414,30 +413,15 @@ function initRsvp() {
 function lifecycleCopy() {
   switch (state.lifecycle) {
     case 'final-countdown':
-      return {
-        title: t('اقترب موعدنا', 'Almost time'),
-        body: t('راجع تفاصيل المكان وموعد الوصول قبل انطلاق ليلة العمر.', 'Review the venue and arrival details before the celebration begins.')
-      };
+      return { title: t('اقترب موعدنا', 'Almost time'), body: t('راجع تفاصيل المكان وموعد الوصول قبل انطلاق ليلة العمر.', 'Review the venue and arrival details before the celebration begins.') };
     case 'live':
-      return {
-        title: t('اليوم موعدنا', 'Today is the day'),
-        body: t('يسعدنا وجودكم معنا. استخدم زر المكان للوصول مباشرة.', 'We are delighted to have you with us. Use Venue for directions.')
-      };
+      return { title: t('اليوم موعدنا', 'Today is the day'), body: t('يسعدنا وجودكم معنا. استخدم زر المكان للوصول مباشرة.', 'We are delighted to have you with us. Use Venue for directions.') };
     case 'thank-you':
-      return {
-        title: t('شكرًا من القلب', 'Thank you'),
-        body: t('وجودكم جعل الذكرى أجمل. تبقى هذه الدعوة مساحة للاحتفاظ باللحظات.', 'Your presence made the memory even more special. This invitation now preserves the moments.')
-      };
+      return { title: t('شكرًا من القلب', 'Thank you'), body: t('وجودكم جعل الذكرى أجمل. تبقى هذه الدعوة مساحة للاحتفاظ باللحظات.', 'Your presence made the memory even more special. This invitation now preserves the moments.') };
     case 'archive':
-      return {
-        title: t('ذكرى محفوظة', 'A preserved memory'),
-        body: t('تحولت الدعوة إلى صفحة تذكارية للمناسبة.', 'The invitation is now a permanent event keepsake.')
-      };
+      return { title: t('ذكرى محفوظة', 'A preserved memory'), body: t('تحولت الدعوة إلى صفحة تذكارية للمناسبة.', 'The invitation is now a permanent event keepsake.') };
     default:
-      return {
-        title: t('يسعدنا أن تكونوا معنا', 'We would love to celebrate with you'),
-        body: t('يمكنكم مراجعة التفاصيل وتأكيد الحضور من هذه الدعوة.', 'Review the details and confirm attendance from this invitation.')
-      };
+      return { title: t('يسعدنا أن تكونوا معنا', 'We would love to celebrate with you'), body: t('يمكنكم مراجعة التفاصيل وتأكيد الحضور من هذه الدعوة.', 'Review the details and confirm attendance from this invitation.') };
   }
 }
 
@@ -475,12 +459,13 @@ function initSmartDock() {
   dock.className = 'garhy-smart-dock';
   dock.setAttribute('aria-label', t('إجراءات سريعة', 'Quick actions'));
 
+  const detailsTarget = $('#the-event') ? '#the-event' : '#details';
   const thirdAction = ['thank-you', 'archive'].includes(state.lifecycle)
     ? `<button type="button" class="is-primary" data-garhy-share>↗ <span>${t('مشاركة', 'Share')}</span></button>`
     : `<a class="is-primary" href="#rsvp">♥ <span>${t('الحضور', 'RSVP')}</span></a>`;
 
   dock.innerHTML = `
-    <a href="#the-event">✦ <span>${t('التفاصيل', 'Details')}</span></a>
+    <a href="${detailsTarget}">✦ <span>${t('التفاصيل', 'Details')}</span></a>
     <a href="#location">⌖ <span>${t('المكان', 'Venue')}</span></a>
     ${thirdAction}
   `;
@@ -535,7 +520,7 @@ function boot() {
     getGuestPass: () => state.guestPass,
     getRsvp: () => state.rsvp,
     track,
-    version: '1.0.0-productization'
+    version: '1.1.0-productization'
   });
 
   track('boot', { personalized: Boolean(state.guestName) });
