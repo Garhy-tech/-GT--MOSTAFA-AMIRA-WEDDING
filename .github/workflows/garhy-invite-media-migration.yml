@@ -1,0 +1,102 @@
+name: GARHY INVITE Media Migration
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/garhy-invite-media-migration.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  migrate-live-media:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SOURCE_ORIGIN: https://mostafa-amira-2026.vercel.app
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download approved production assets byte-for-byte
+        shell: bash
+        run: |
+          set -euo pipefail
+          paths=(
+            'assets/css/style.css'
+            'assets/icons/app-icon-3d.avif'
+            'assets/icons/app-icon-3d.webp'
+            'assets/icons/icon-512.png'
+            'assets/icons/favicon.png'
+            'assets/icons/apple-touch-icon.png'
+            'assets/images/og-operation-forever.jpg'
+            'assets/images/hero/hero-wedding-story.avif'
+            'assets/images/hero/hero-wedding-story.webp'
+            'assets/images/hero/hero-wedding-story.jpg'
+            'assets/images/couple/couple.avif'
+            'assets/images/couple/couple.webp'
+            'assets/images/couple/couple.jpg'
+            'assets/images/event/ballroom.avif'
+            'assets/images/event/ballroom.webp'
+            'assets/images/event/ballroom.jpg'
+            'assets/images/gallery/gallery-01.jpg'
+            'assets/images/gallery/gallery-03.jpg'
+            'assets/images/gallery/gallery-06.jpg'
+            'assets/images/gallery/gallery-05.jpg'
+            'assets/images/gallery/gallery-02.jpg'
+            'assets/images/location/palace.jpg'
+            'assets/audio/daweta-zewace.m4a'
+            'assets/audio/daweta-zewace.mp3'
+          )
+
+          for src in "${paths[@]}"; do
+            dst="assets/v2/${src#assets/}"
+            mkdir -p "$(dirname "$dst")"
+            echo "Downloading $src -> $dst"
+            curl --fail --location --silent --show-error --retry 3 --retry-all-errors \
+              "$SOURCE_ORIGIN/$src" -o "$dst"
+            test -s "$dst"
+          done
+
+      - name: Validate media signatures and sizes
+        shell: bash
+        run: |
+          set -euo pipefail
+          file --mime-type assets/v2/images/hero/hero-wedding-story.jpg
+          file --mime-type assets/v2/images/hero/hero-wedding-story.avif
+          file --mime-type assets/v2/images/hero/hero-wedding-story.webp
+          file --mime-type assets/v2/icons/icon-512.png
+          file --mime-type assets/v2/audio/daweta-zewace.m4a
+          file --mime-type assets/v2/audio/daweta-zewace.mp3
+
+          test "$(stat -c%s assets/v2/images/hero/hero-wedding-story.jpg)" -gt 10000
+          test "$(stat -c%s assets/v2/icons/icon-512.png)" -gt 1000
+          test "$(stat -c%s assets/v2/audio/daweta-zewace.m4a)" -gt 10000
+          test "$(stat -c%s assets/v2/audio/daweta-zewace.mp3)" -gt 10000
+
+          sha256sum $(find assets/v2 -type f -print | sort) | tee assets/v2/SHA256SUMS.txt
+
+      - name: Audit CSS external/relative assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo 'CSS url() references:'
+          grep -oE 'url\([^)]*\)' assets/v2/css/style.css || true
+
+      - name: Commit migrated media
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add assets/v2
+          if git diff --cached --quiet; then
+            echo 'No media changes to commit.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'chore: migrate GARHY INVITE production media'
+          git push origin HEAD:main
