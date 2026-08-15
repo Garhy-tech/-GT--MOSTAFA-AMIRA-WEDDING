@@ -68,18 +68,13 @@ jobs:
         shell: bash
         run: npx --yes vercel@latest pull --yes --environment=preview --cwd "$RELEASE_DIR" --token="$VERCEL_TOKEN"
 
-      - name: Build V2 release candidate
-        if: steps.preflight.outputs.ready == 'true'
-        shell: bash
-        run: npx --yes vercel@latest build --cwd "$RELEASE_DIR" --token="$VERCEL_TOKEN"
-
-      - name: Deploy isolated V2 preview
+      - name: Deploy isolated V2 static preview
         if: steps.preflight.outputs.ready == 'true'
         id: deploy
         shell: bash
         run: |
           set -euo pipefail
-          url="$(npx --yes vercel@latest deploy --prebuilt --cwd "$RELEASE_DIR" --token="$VERCEL_TOKEN" | tail -n 1)"
+          url="$(npx --yes vercel@latest deploy --yes --cwd "$RELEASE_DIR" --token="$VERCEL_TOKEN" | tail -n 1)"
           echo "url=$url" >> "$GITHUB_OUTPUT"
           printf '%s\n' "$url" > vercel-preview-url.txt
           {
@@ -87,7 +82,7 @@ jobs:
             echo
             echo "Deployment: $url"
             echo
-            echo 'Source: V2-only release directory.'
+            echo 'Source: direct static V2-only release directory.'
             echo 'Target: isolated `garhy-invite-v2-preview` project. Production aliases and GARHY domains were not modified.'
           } >> "$GITHUB_STEP_SUMMARY"
 
