@@ -6,7 +6,7 @@ addEventListener('scroll',()=>{if(!scheduled){scheduled=true;requestAnimationFra
 
 let galleryStylesReady=false;
 function loadGalleryStyles(){if(galleryStylesReady)return;galleryStylesReady=true;const link=document.createElement('link');link.rel='stylesheet';link.href='./gallery.css';link.dataset.galleryStyles='';document.head.append(link)}
-document.querySelector('[data-enter]')?.addEventListener('click',loadGalleryStyles,{once:true});
+if(document.body.hasAttribute('data-experience-booted'))loadGalleryStyles();else document.querySelector('[data-enter]')?.addEventListener('click',loadGalleryStyles,{once:true});
 
 const galleryImages=[...document.querySelectorAll('[data-festival-image]')];
 function markImageReady(img){const card=img.closest('.media-card');if(!card)return;card.classList.add('is-loaded');card.classList.remove('is-loading')}
@@ -15,7 +15,7 @@ function loadFestivalImage(img){if(!img?.dataset.src||img.dataset.mediaState)ret
 if(galleryImages.length){if(!('IntersectionObserver'in window)){galleryImages.forEach(loadFestivalImage)}else{const galleryObserver=new IntersectionObserver(entries=>{for(const entry of entries){if(entry.isIntersecting){loadFestivalImage(entry.target);galleryObserver.unobserve(entry.target)}}},{rootMargin:'420px 0px',threshold:.01});galleryImages.forEach(img=>galleryObserver.observe(img))}}
 
 const zones=[document.querySelector('[data-pyro-zone]'),document.querySelector('[data-finale-zone]')].filter(Boolean);
-if(reduce||!('IntersectionObserver'in window)){zones.forEach(z=>z.classList.add('is-live'))}else{const fired=new WeakSet();const observer=new IntersectionObserver(entries=>{for(const entry of entries){if(entry.isIntersecting&&!fired.has(entry.target)){fired.add(entry.target);entry.target.classList.add('is-live');setTimeout(()=>entry.target.classList.remove('is-live'),1450)}}},{threshold:.48,rootMargin:'-4% 0px -8%'});zones.forEach(z=>observer.observe(z))}
+if(reduce||!('IntersectionObserver'in window)){zones.forEach(z=>z.classList.add('is-live'))}else{const fired=new WeakSet();const observer=new IntersectionObserver(entries=>{for(const entry of entries){if(entry.isIntersecting&&!fired.has(entry.target)){fired.add(entry.target);entry.target.classList.add('is-live');setTimeout(()=>entry.target.classList.remove('is-live'),1450)}}},{threshold:.28,rootMargin:'-2% 0px -5%'});zones.forEach(z=>observer.observe(z))}
 
 const finale=document.querySelector('[data-finale-zone]');if(finale&&!matchMedia('(pointer: coarse)').matches){finale.addEventListener('pointermove',event=>{const r=finale.getBoundingClientRect();const x=(event.clientX-r.left)/r.width-.5;const y=(event.clientY-r.top)/r.height-.5;finale.style.setProperty('--fx',x.toFixed(3));finale.style.setProperty('--fy',y.toFixed(3))},{passive:true})}
 })();
