@@ -9,7 +9,7 @@ requestAnimationFrame(()=>enter.focus({preventScroll:true}));
 let starting=false;
 const originalLabel=enter.querySelector('span')?.textContent||'ادخل الليلة';
 function loadStyle(href){return new Promise((resolve,reject)=>{const link=document.createElement('link');link.rel='stylesheet';link.href=href;link.onload=()=>resolve(link);link.onerror=()=>reject(new Error(`تعذر تحميل ${href}`));document.head.append(link)})}
-function loadScript(src){return new Promise((resolve,reject)=>{const script=document.createElement('script');script.src=src;script.async=true;script.onload=()=>resolve(script);script.onerror=()=>reject(new Error(`تعذر تحميل ${src}`));document.head.append(script)})}
+function loadScript(src){return new Promise((resolve,reject)=>{const script=document.createElement('script');script.src=src;script.async=false;script.onload=()=>resolve(script);script.onerror=()=>reject(new Error(`تعذر تحميل ${src}`));document.head.append(script)})}
 async function start(){
  if(starting)return;starting=true;
  enter.disabled=true;enter.setAttribute('aria-busy','true');intro.classList.add('is-entering');
@@ -17,9 +17,10 @@ async function start(){
  try{
    document.body.setAttribute('data-experience-booted','');
    const fragment=template.content.cloneNode(true);template.before(fragment);template.remove();
+   const sound=document.querySelector('[data-beat-toggle]');if(sound){sound.setAttribute('aria-label','تشغيل أغنية الفرح');const soundLabel=sound.querySelector('[data-sound-label]');if(soundLabel)soundLabel.textContent='MUSIC'}
    await Promise.all([
      loadStyle('./styles.css'),loadStyle('./responsive.css'),loadStyle('./polish.css'),
-     loadScript('./app.js'),loadScript('./polish.js')
+     loadScript('./app.js'),loadScript('./polish.js'),loadScript('./music.js')
    ]);
    await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
    document.body.classList.remove('intro-active');
