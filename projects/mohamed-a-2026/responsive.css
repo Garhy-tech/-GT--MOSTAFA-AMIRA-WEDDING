@@ -1,1 +1,1 @@
-@media(max-width:640px){.hero-title{width:100%;max-width:100%}.hero-title .name-m{font-size:clamp(58px,20.5vw,90px);letter-spacing:-.045em;max-width:100%}}footer{color:#858086}.section-code{color:#777278}
+@media(max-width:640px){.hero-title{width:100%;max-width:100%}.hero-title .name-m{font-size:clamp(50px,18vw,80px);letter-spacing:-.055em;max-width:100%;white-space:nowrap;transform:scaleX(.84);transform-origin:center}.hero-title .name-m::before{transform:translate(1px,-2px)}}footer{color:#858086}.section-code{color:#777278}
