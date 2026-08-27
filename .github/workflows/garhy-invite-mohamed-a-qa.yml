@@ -1,0 +1,92 @@
+name: GARHY INVITE MOHAMED A QA
+
+on:
+  push:
+    branches:
+      - feature/mohamed-a-festival-2026
+    paths:
+      - 'projects/mohamed-a-2026/**'
+      - 'tests/e2e/mohamed-a-festival-smoke.mjs'
+      - '.github/workflows/garhy-invite-mohamed-a-qa.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'projects/mohamed-a-2026/**'
+      - 'tests/e2e/mohamed-a-festival-smoke.mjs'
+      - '.github/workflows/garhy-invite-mohamed-a-qa.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  release-candidate-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Static quality and performance budget
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check projects/mohamed-a-2026/app.js
+          python3 - <<'PY'
+          import json
+          from html.parser import HTMLParser
+          from pathlib import Path
+
+          root = Path('projects/mohamed-a-2026')
+          data = json.loads((root / 'event.json').read_text(encoding='utf-8'))
+          assert data['slug'] == 'mohamed-a-2026'
+          assert data['rsvp'] is False
+          assert data['events'][0]['location'] is None
+          assert data['events'][1]['location']['name'] == 'قاعة شهرزاد'
+
+          class Parser(HTMLParser): pass
+          Parser().feed((root / 'index.html').read_text(encoding='utf-8'))
+
+          sizes = {p.name: p.stat().st_size for p in [root/'index.html', root/'styles.css', root/'app.js', root/'event.json', root/'vercel.json']}
+          total = sum(sizes.values())
+          assert sizes['index.html'] < 30_000, sizes
+          assert sizes['styles.css'] < 35_000, sizes
+          assert sizes['app.js'] < 20_000, sizes
+          assert total < 75_000, (sizes, total)
+          print('Static payload bytes:', sizes, 'total=', total)
+          PY
+          ! grep -RIE 'service[_-]?role|sb_secret_|SUPABASE_SERVICE_ROLE' projects/mohamed-a-2026 --exclude='*.md'
+          ! grep -RIE 'fonts\.googleapis|fonts\.gstatic|<img|<video|<iframe' projects/mohamed-a-2026/index.html
+          grep -Fq "Content-Security-Policy" projects/mohamed-a-2026/vercel.json
+          grep -Fq "noindex, nofollow, noarchive" projects/mohamed-a-2026/vercel.json
+
+      - name: Install browser QA dependencies
+        run: |
+          npm install --no-save playwright@1.55.0 @axe-core/playwright@4.10.2
+          npx playwright install --with-deps chromium
+
+      - name: Start isolated static server
+        run: |
+          python3 -m http.server 4173 --bind 127.0.0.1 > /tmp/mohamed-a-http.log 2>&1 &
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:4173/projects/mohamed-a-2026/index.html >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/mohamed-a-http.log
+          exit 1
+
+      - name: Multi-viewport browser accessibility QA
+        run: node tests/e2e/mohamed-a-festival-smoke.mjs
+
+      - name: Upload QA screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mohamed-a-release-candidate-${{ github.sha }}
+          path: artifacts/mohamed-a-qa/*.png
+          if-no-files-found: warn
+          retention-days: 14
