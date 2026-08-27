@@ -7,38 +7,19 @@ if(!intro||!enter||!template)return;
 skip?.setAttribute('inert','');
 requestAnimationFrame(()=>enter.focus({preventScroll:true}));
 let starting=false;
-let hinted=false;
 const originalLabel=enter.querySelector('span')?.textContent||'ادخل الليلة';
-const assets=[
-  ['./styles.css','style'],
-  ['./responsive.css','style'],
-  ['./polish.css','style'],
-  ['./app.js','script'],
-  ['./polish.js','script']
-];
-function hintAssets(){
- if(hinted)return;hinted=true;
- for(const [href,as] of assets){
-   const link=document.createElement('link');
-   link.rel='prefetch';link.href=href;link.as=as;link.fetchPriority='low';
-   document.head.append(link);
- }
-}
 function loadStyle(href){return new Promise((resolve,reject)=>{const link=document.createElement('link');link.rel='stylesheet';link.href=href;link.onload=()=>resolve(link);link.onerror=()=>reject(new Error(`تعذر تحميل ${href}`));document.head.append(link)})}
 function loadScript(src){return new Promise((resolve,reject)=>{const script=document.createElement('script');script.src=src;script.async=true;script.onload=()=>resolve(script);script.onerror=()=>reject(new Error(`تعذر تحميل ${src}`));document.head.append(script)})}
 async function start(){
- if(starting)return;starting=true;hintAssets();
+ if(starting)return;starting=true;
  enter.disabled=true;enter.setAttribute('aria-busy','true');intro.classList.add('is-entering');
  const label=enter.querySelector('span');if(label)label.textContent='يلا بينا';
  try{
    document.body.setAttribute('data-experience-booted','');
    const fragment=template.content.cloneNode(true);template.before(fragment);template.remove();
    await Promise.all([
-     loadStyle('./styles.css'),
-     loadStyle('./responsive.css'),
-     loadStyle('./polish.css'),
-     loadScript('./app.js'),
-     loadScript('./polish.js')
+     loadStyle('./styles.css'),loadStyle('./responsive.css'),loadStyle('./polish.css'),
+     loadScript('./app.js'),loadScript('./polish.js')
    ]);
    await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
    document.body.classList.remove('intro-active');
@@ -52,8 +33,6 @@ async function start(){
    setTimeout(()=>{if(label&&!starting)label.textContent=originalLabel},1800);
  }
 }
-enter.addEventListener('pointerdown',hintAssets,{once:true,passive:true});
-enter.addEventListener('pointerenter',hintAssets,{once:true,passive:true});
 enter.addEventListener('click',start);
 intro.addEventListener('keydown',event=>{if(event.key==='Enter'&&event.target===intro)start()});
 })();
