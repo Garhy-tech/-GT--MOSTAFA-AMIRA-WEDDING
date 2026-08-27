@@ -9,6 +9,7 @@ on:
       - 'tests/e2e/mohamed-a-festival-smoke.mjs'
       - 'tests/e2e/mohamed-a-functional.mjs'
       - 'tests/e2e/mohamed-a-intro-card-bounds.mjs'
+      - 'tests/e2e/mohamed-a-visual-frames.mjs'
       - '.github/workflows/garhy-invite-mohamed-a-qa.yml'
   pull_request:
     branches: [main]
@@ -17,6 +18,7 @@ on:
       - 'tests/e2e/mohamed-a-festival-smoke.mjs'
       - 'tests/e2e/mohamed-a-functional.mjs'
       - 'tests/e2e/mohamed-a-intro-card-bounds.mjs'
+      - 'tests/e2e/mohamed-a-visual-frames.mjs'
       - '.github/workflows/garhy-invite-mohamed-a-qa.yml'
 
 permissions:
@@ -25,7 +27,7 @@ permissions:
 jobs:
   release-candidate-qa:
     runs-on: ubuntu-latest
-    timeout-minutes: 22
+    timeout-minutes: 24
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -44,6 +46,7 @@ jobs:
           node --check tests/e2e/mohamed-a-festival-smoke.mjs
           node --check tests/e2e/mohamed-a-functional.mjs
           node --check tests/e2e/mohamed-a-intro-card-bounds.mjs
+          node --check tests/e2e/mohamed-a-visual-frames.mjs
           python3 - <<'PY'
           import json
           from html.parser import HTMLParser
@@ -104,6 +107,9 @@ jobs:
 
       - name: Calendar and sharing functional QA
         run: node tests/e2e/mohamed-a-functional.mjs
+
+      - name: Real viewport visual-frame QA
+        run: node tests/e2e/mohamed-a-visual-frames.mjs
 
       - name: Upload QA screenshots
         if: always()
