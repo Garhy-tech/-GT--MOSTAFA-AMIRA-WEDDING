@@ -49,6 +49,7 @@ jobs:
           set -euo pipefail
           test -s "$PROJECT_DIR/index.html"
           test -s "$PROJECT_DIR/styles.css"
+          test -s "$PROJECT_DIR/responsive.css"
           test -s "$PROJECT_DIR/app.js"
           test -s "$PROJECT_DIR/event.json"
           test -s "$PROJECT_DIR/vercel.json"
@@ -114,6 +115,7 @@ jobs:
           mkdir -p "$RELEASE_DIR/.vercel"
           cp "$PROJECT_DIR/index.html" "$RELEASE_DIR/index.html"
           cp "$PROJECT_DIR/styles.css" "$RELEASE_DIR/styles.css"
+          cp "$PROJECT_DIR/responsive.css" "$RELEASE_DIR/responsive.css"
           cp "$PROJECT_DIR/app.js" "$RELEASE_DIR/app.js"
           cp "$PROJECT_DIR/event.json" "$RELEASE_DIR/event.json"
           cp "$PROJECT_DIR/vercel.json" "$RELEASE_DIR/vercel.json"
@@ -131,7 +133,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          url="$(npx --yes vercel@latest deploy --yes --cwd "$RELEASE_DIR" --token="$VERCEL_TOKEN" | tail -n 1)"
+          url="$(cd "$RELEASE_DIR" && npx --yes vercel@latest deploy --yes --token="$VERCEL_TOKEN" | tail -n 1)"
           case "$url" in
             https://*) ;;
             *) echo "Vercel did not return a deployment URL: $url" >&2; exit 1 ;;
@@ -176,11 +178,11 @@ jobs:
             echo
             echo "Deployment: $PREVIEW_URL"
             echo
-            echo '✅ Release assembled outside the Wedding Git root.'
-            echo '✅ Isolated Vercel Preview project; feedback injection disabled.'
+            echo '✅ Vercel executed from the isolated release directory.'
+            echo '✅ Preview feedback injection disabled.'
             echo '✅ Dates, pending henna location, and Shahrazad Hall verified.'
             echo '✅ Attendance response flow absent.'
-            echo '✅ Strict CSP/no-store/noindex headers verified on the edge response.'
+            echo '✅ Strict CSP/no-store/noindex headers verified at the edge.'
             echo '✅ Legacy Google Fonts and Supabase allowances absent.'
             echo '✅ Existing Mostafa & Amira project and aliases untouched.'
           } >> "$GITHUB_STEP_SUMMARY"
