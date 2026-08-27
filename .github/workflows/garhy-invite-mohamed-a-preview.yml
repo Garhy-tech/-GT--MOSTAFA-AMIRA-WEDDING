@@ -52,13 +52,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test -s "$PROJECT_DIR/index.html"
-          test -s "$PROJECT_DIR/styles.css"
-          test -s "$PROJECT_DIR/responsive.css"
-          test -s "$PROJECT_DIR/app.js"
-          test -s "$PROJECT_DIR/event.json"
-          test -s "$PROJECT_DIR/vercel.json"
+          for file in index.html styles.css responsive.css polish.css app.js polish.js event.json vercel.json; do test -s "$PROJECT_DIR/$file"; done
           node --check "$PROJECT_DIR/app.js"
+          node --check "$PROJECT_DIR/polish.js"
           python - <<'PY'
           import json
           from pathlib import Path
@@ -81,34 +77,16 @@ jobs:
           auth=(-H "Authorization: Bearer $VERCEL_TOKEN")
           endpoint="https://api.vercel.com/v9/projects/$PROJECT_NAME?teamId=$VERCEL_ORG_ID"
           status="$(curl -sS -o /tmp/vercel-project.json -w '%{http_code}' "${auth[@]}" "$endpoint")"
-
           if [ "$status" = '404' ]; then
-            create_status="$(curl -sS -o /tmp/vercel-project.json -w '%{http_code}' \
-              -X POST \
-              "${auth[@]}" \
-              -H 'Content-Type: application/json' \
-              "https://api.vercel.com/v9/projects?teamId=$VERCEL_ORG_ID" \
-              --data "{\"name\":\"$PROJECT_NAME\",\"enablePreviewFeedback\":false,\"enableProductionFeedback\":false}")"
-            case "$create_status" in
-              200|201) ;;
-              *) echo "Failed to create isolated Vercel project (HTTP $create_status)." >&2; cat /tmp/vercel-project.json >&2; exit 1 ;;
-            esac
+            create_status="$(curl -sS -o /tmp/vercel-project.json -w '%{http_code}' -X POST "${auth[@]}" -H 'Content-Type: application/json' "https://api.vercel.com/v9/projects?teamId=$VERCEL_ORG_ID" --data "{\"name\":\"$PROJECT_NAME\",\"enablePreviewFeedback\":false,\"enableProductionFeedback\":false}")"
+            case "$create_status" in 200|201) ;; *) echo "Failed to create isolated Vercel project (HTTP $create_status)." >&2; cat /tmp/vercel-project.json >&2; exit 1 ;; esac
           elif [ "$status" != '200' ]; then
-            echo "Failed to inspect isolated Vercel project (HTTP $status)." >&2
-            cat /tmp/vercel-project.json >&2
-            exit 1
+            echo "Failed to inspect isolated Vercel project (HTTP $status)." >&2; cat /tmp/vercel-project.json >&2; exit 1
           fi
-
           project_id="$(jq -r '.id // empty' /tmp/vercel-project.json)"
           test -n "$project_id"
           echo "VERCEL_PROJECT_ID=$project_id" >> "$GITHUB_ENV"
-
-          patch_status="$(curl -sS -o /tmp/vercel-project-patch.json -w '%{http_code}' \
-            -X PATCH \
-            "${auth[@]}" \
-            -H 'Content-Type: application/json' \
-            "https://api.vercel.com/v9/projects/$project_id?teamId=$VERCEL_ORG_ID" \
-            --data '{"enablePreviewFeedback":false,"enableProductionFeedback":false}')"
+          patch_status="$(curl -sS -o /tmp/vercel-project-patch.json -w '%{http_code}' -X PATCH "${auth[@]}" -H 'Content-Type: application/json' "https://api.vercel.com/v9/projects/$project_id?teamId=$VERCEL_ORG_ID" --data '{"enablePreviewFeedback":false,"enableProductionFeedback":false}')"
           [ "$patch_status" = '200' ] || { echo "Failed to harden preview project (HTTP $patch_status)." >&2; cat /tmp/vercel-project-patch.json >&2; exit 1; }
 
       - name: Assemble release outside Git root
@@ -118,18 +96,8 @@ jobs:
           set -euo pipefail
           rm -rf "$RELEASE_DIR"
           mkdir -p "$RELEASE_DIR/.vercel"
-          cp "$PROJECT_DIR/index.html" "$RELEASE_DIR/index.html"
-          cp "$PROJECT_DIR/styles.css" "$RELEASE_DIR/styles.css"
-          cp "$PROJECT_DIR/responsive.css" "$RELEASE_DIR/responsive.css"
-          cp "$PROJECT_DIR/app.js" "$RELEASE_DIR/app.js"
-          cp "$PROJECT_DIR/event.json" "$RELEASE_DIR/event.json"
-          cp "$PROJECT_DIR/vercel.json" "$RELEASE_DIR/vercel.json"
-          jq -n \
-            --arg orgId "$VERCEL_ORG_ID" \
-            --arg projectId "$VERCEL_PROJECT_ID" \
-            --arg projectName "$PROJECT_NAME" \
-            '{orgId:$orgId,projectId:$projectId,projectName:$projectName}' \
-            > "$RELEASE_DIR/.vercel/project.json"
+          for file in index.html styles.css responsive.css polish.css app.js polish.js event.json vercel.json; do cp "$PROJECT_DIR/$file" "$RELEASE_DIR/$file"; done
+          jq -n --arg orgId "$VERCEL_ORG_ID" --arg projectId "$VERCEL_PROJECT_ID" --arg projectName "$PROJECT_NAME" '{orgId:$orgId,projectId:$projectId,projectName:$projectName}' > "$RELEASE_DIR/.vercel/project.json"
           test -s "$RELEASE_DIR/vercel.json"
 
       - name: Deploy isolated preview
@@ -139,10 +107,7 @@ jobs:
         run: |
           set -euo pipefail
           url="$(cd "$RELEASE_DIR" && npx --yes vercel@latest deploy --yes --token="$VERCEL_TOKEN" | tail -n 1)"
-          case "$url" in
-            https://*) ;;
-            *) echo "Vercel did not return a deployment URL: $url" >&2; exit 1 ;;
-          esac
+          case "$url" in https://*) ;; *) echo "Vercel did not return a deployment URL: $url" >&2; exit 1 ;; esac
           echo "url=$url" >> "$GITHUB_OUTPUT"
           printf '%s\n' "$url" > mohamed-a-preview-url.txt
 
@@ -155,20 +120,17 @@ jobs:
           set -euo pipefail
           npx --yes vercel@latest curl / --deployment "$PREVIEW_URL" > /tmp/mohamed-a-root.html
           grep -Fq 'MOHAMED' /tmp/mohamed-a-root.html
+          grep -Fq 'polish.css' /tmp/mohamed-a-root.html
+          grep -Fq 'polish.js' /tmp/mohamed-a-root.html
           grep -Fq '03 / 09 / 2026' /tmp/mohamed-a-root.html
           grep -Fq '04 / 09 / 2026' /tmp/mohamed-a-root.html
           grep -Fq 'سيتم إضافته قريبًا' /tmp/mohamed-a-root.html
           grep -Fq 'قاعة شهرزاد' /tmp/mohamed-a-root.html
           ! grep -Fq 'vercel.live' /tmp/mohamed-a-root.html
-          if grep -Eiq 'RSVP|تأكيد الحضور|اعتذار' /tmp/mohamed-a-root.html; then
-            echo 'Unexpected attendance response flow detected in client preview.' >&2
-            exit 1
-          fi
-
+          if grep -Eiq 'RSVP|تأكيد الحضور|اعتذار' /tmp/mohamed-a-root.html; then echo 'Unexpected attendance response flow detected in client preview.' >&2; exit 1; fi
           npx --yes vercel@latest curl /event.json --deployment "$PREVIEW_URL" > /tmp/mohamed-a-event.json
           grep -Fq '"slug": "mohamed-a-2026"' /tmp/mohamed-a-event.json
           grep -Fq '"rsvp": false' /tmp/mohamed-a-event.json
-
           npx --yes vercel@latest curl / --deployment "$PREVIEW_URL" -I > /tmp/mohamed-a-headers.txt
           tr '[:upper:]' '[:lower:]' < /tmp/mohamed-a-headers.txt > /tmp/mohamed-a-headers-lower.txt
           grep -Fq "content-security-policy:" /tmp/mohamed-a-headers-lower.txt
@@ -177,18 +139,16 @@ jobs:
           grep -Fq 'x-robots-tag: noindex' /tmp/mohamed-a-headers-lower.txt
           ! grep -Fq 'fonts.googleapis.com' /tmp/mohamed-a-headers-lower.txt
           ! grep -Fq 'supabase.co' /tmp/mohamed-a-headers-lower.txt
-
           {
             echo '## MOHAMED × A Vercel Preview'
             echo
             echo "Deployment: $PREVIEW_URL"
             echo
-            echo '✅ Vercel executed from the isolated release directory.'
+            echo '✅ Isolated release directory and final polish assets verified.'
             echo '✅ Preview feedback injection disabled.'
             echo '✅ Dates, pending henna location, and Shahrazad Hall verified.'
             echo '✅ Attendance response flow absent.'
             echo '✅ Strict CSP/no-store/noindex headers verified at the edge.'
-            echo '✅ Legacy Google Fonts and Supabase allowances absent.'
             echo '✅ Existing Mostafa & Amira project and aliases untouched.'
           } >> "$GITHUB_STEP_SUMMARY"
 
