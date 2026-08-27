@@ -1,0 +1,166 @@
+name: GARHY INVITE MOHAMED A Preview
+
+on:
+  push:
+    branches:
+      - feature/mohamed-a-festival-2026
+    paths:
+      - '.github/workflows/garhy-invite-mohamed-a-preview.yml'
+      - 'projects/mohamed-a-2026/**'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      VERCEL_ORG_ID: team_mZ52AwdCUXSmkLKH3YMqqf5U
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      PROJECT_NAME: garhy-invite-mohamed-a-2026-preview
+      PROJECT_DIR: projects/mohamed-a-2026
+    steps:
+      - name: Checkout tested source
+        uses: actions/checkout@v4
+
+      - name: Preview deployment preflight
+        id: preflight
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${VERCEL_TOKEN:-}" ]; then
+            echo 'ready=false' >> "$GITHUB_OUTPUT"
+            {
+              echo '## MOHAMED × A Vercel Preview'
+              echo
+              echo 'Preview deployment was not attempted because repository secret `VERCEL_TOKEN` is not configured.'
+              echo 'No production project, domain, alias, or existing GARHY Invite deployment was modified.'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          echo 'ready=true' >> "$GITHUB_OUTPUT"
+
+      - name: Validate isolated client release
+        if: steps.preflight.outputs.ready == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$PROJECT_DIR/index.html"
+          test -s "$PROJECT_DIR/styles.css"
+          test -s "$PROJECT_DIR/app.js"
+          test -s "$PROJECT_DIR/event.json"
+          test -s "$PROJECT_DIR/vercel.json"
+          node --check "$PROJECT_DIR/app.js"
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('projects/mohamed-a-2026/event.json')
+          data=json.loads(p.read_text(encoding='utf-8'))
+          assert data['slug']=='mohamed-a-2026'
+          assert data['rsvp'] is False
+          assert data['events'][0]['date']=='2026-09-03'
+          assert data['events'][0]['location'] is None
+          assert data['events'][1]['date']=='2026-09-04'
+          assert data['events'][1]['location']['name']=='قاعة شهرزاد'
+          print('Event contract OK')
+          PY
+          ! grep -RIE 'service[_-]?role|sb_secret_|SUPABASE_SERVICE_ROLE' "$PROJECT_DIR" --exclude='*.md'
+
+      - name: Resolve or create isolated Vercel preview project
+        if: steps.preflight.outputs.ready == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          auth=(-H "Authorization: Bearer $VERCEL_TOKEN")
+          endpoint="https://api.vercel.com/v9/projects/$PROJECT_NAME?teamId=$VERCEL_ORG_ID"
+          status="$(curl -sS -o /tmp/vercel-project.json -w '%{http_code}' "${auth[@]}" "$endpoint")"
+
+          if [ "$status" = '404' ]; then
+            create_status="$(curl -sS -o /tmp/vercel-project.json -w '%{http_code}' \
+              -X POST \
+              "${auth[@]}" \
+              -H 'Content-Type: application/json' \
+              "https://api.vercel.com/v9/projects?teamId=$VERCEL_ORG_ID" \
+              --data "{\"name\":\"$PROJECT_NAME\",\"enablePreviewFeedback\":true,\"enableProductionFeedback\":false}")"
+            case "$create_status" in
+              200|201) ;;
+              *)
+                echo "Failed to create isolated Vercel project (HTTP $create_status)." >&2
+                jq '{error, message}' /tmp/vercel-project.json 2>/dev/null || true
+                exit 1
+                ;;
+            esac
+          elif [ "$status" != '200' ]; then
+            echo "Failed to inspect isolated Vercel project (HTTP $status)." >&2
+            jq '{error, message}' /tmp/vercel-project.json 2>/dev/null || true
+            exit 1
+          fi
+
+          project_id="$(jq -r '.id // empty' /tmp/vercel-project.json)"
+          test -n "$project_id"
+          echo "VERCEL_PROJECT_ID=$project_id" >> "$GITHUB_ENV"
+          mkdir -p "$PROJECT_DIR/.vercel"
+          jq -n \
+            --arg orgId "$VERCEL_ORG_ID" \
+            --arg projectId "$project_id" \
+            --arg projectName "$PROJECT_NAME" \
+            '{orgId:$orgId,projectId:$projectId,projectName:$projectName}' \
+            > "$PROJECT_DIR/.vercel/project.json"
+
+      - name: Deploy isolated preview
+        if: steps.preflight.outputs.ready == 'true'
+        id: deploy
+        shell: bash
+        run: |
+          set -euo pipefail
+          url="$(npx --yes vercel@latest deploy --yes --cwd "$PROJECT_DIR" --token="$VERCEL_TOKEN" | tail -n 1)"
+          case "$url" in
+            https://*) ;;
+            *) echo "Vercel did not return a deployment URL: $url" >&2; exit 1 ;;
+          esac
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          printf '%s\n' "$url" > mohamed-a-preview-url.txt
+
+      - name: Verify deployed preview contract
+        if: steps.preflight.outputs.ready == 'true'
+        shell: bash
+        env:
+          PREVIEW_URL: ${{ steps.deploy.outputs.url }}
+        run: |
+          set -euo pipefail
+          npx --yes vercel@latest curl / --deployment "$PREVIEW_URL" --token="$VERCEL_TOKEN" > /tmp/mohamed-a-root.html
+          grep -Fq 'MOHAMED' /tmp/mohamed-a-root.html
+          grep -Fq '03 / 09 / 2026' /tmp/mohamed-a-root.html
+          grep -Fq '04 / 09 / 2026' /tmp/mohamed-a-root.html
+          grep -Fq 'يتحدد لاحقًا' /tmp/mohamed-a-root.html
+          grep -Fq 'قاعة شهرزاد' /tmp/mohamed-a-root.html
+          if grep -Eiq 'RSVP|تأكيد الحضور|اعتذار' /tmp/mohamed-a-root.html; then
+            echo 'Unexpected RSVP/attendance flow detected in client preview.' >&2
+            exit 1
+          fi
+
+          npx --yes vercel@latest curl /event.json --deployment "$PREVIEW_URL" --token="$VERCEL_TOKEN" > /tmp/mohamed-a-event.json
+          grep -Fq '"slug": "mohamed-a-2026"' /tmp/mohamed-a-event.json
+          grep -Fq '"rsvp": false' /tmp/mohamed-a-event.json
+
+          {
+            echo '## MOHAMED × A Vercel Preview'
+            echo
+            echo "Deployment: $PREVIEW_URL"
+            echo
+            echo '✅ Independent Vercel project.'
+            echo '✅ Preview deployment only; `--prod` is not used.'
+            echo '✅ Henna date and pending location verified.'
+            echo '✅ Wedding date and Shahrazad Hall verified.'
+            echo '✅ RSVP / attendance / decline flow absent.'
+            echo '✅ Existing Mostafa & Amira Vercel project and aliases untouched.'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload preview URL record
+        if: steps.preflight.outputs.ready == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: garhy-invite-mohamed-a-preview-${{ github.sha }}
+          path: mohamed-a-preview-url.txt
+          retention-days: 14
