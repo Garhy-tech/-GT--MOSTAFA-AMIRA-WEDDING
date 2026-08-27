@@ -39,10 +39,11 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Static quality and performance budget
+      - name: Static quality and staged-load performance budget
         shell: bash
         run: |
           set -euo pipefail
+          node --check projects/mohamed-a-2026/intro.js
           node --check projects/mohamed-a-2026/app.js
           node --check projects/mohamed-a-2026/polish.js
           node --check tests/e2e/mohamed-a-festival-smoke.mjs
@@ -70,12 +71,16 @@ jobs:
               def handle_starttag(self, tag, attrs):
                   if tag == 'img': self.images.append(dict(attrs))
           parser=Parser(); parser.feed(html)
-          assert 'polish.css' in html
-          assert 'polish.js' in html
+
+          assert './intro.js' in html
+          assert 'data-experience-template' in html
           assert 'data-pyro-zone' in html
           assert 'data-finale-zone' in html
           assert 'data-gallery-zone' in html
+          assert '<script src="./app.js"' not in html
+          assert '<script src="./polish.js"' not in html
           assert len(parser.images) == 3, parser.images
+
           for image in parser.images:
               assert image.get('src','').startswith('data:image/gif;base64,')
               assert image.get('loading') == 'lazy'
@@ -88,18 +93,23 @@ jobs:
               assert int(query.get('w',['0'])[0]) <= 1200, url
               assert int(query.get('q',['100'])[0]) <= 42, url
 
-          payload = [root/'index.html', root/'styles.css', root/'responsive.css', root/'polish.css', root/'gallery.css', root/'app.js', root/'polish.js', root/'event.json', root/'vercel.json']
+          payload = [root/'index.html', root/'intro.css', root/'intro.js', root/'styles.css', root/'responsive.css', root/'polish.css', root/'gallery.css', root/'app.js', root/'polish.js', root/'event.json', root/'vercel.json']
           sizes = {p.name: p.stat().st_size for p in payload}
           total = sum(sizes.values())
+          initial = sizes['index.html'] + sizes['intro.css'] + sizes['intro.js']
           assert sizes['index.html'] < 38_000, sizes
+          assert sizes['intro.css'] < 8_000, sizes
+          assert sizes['intro.js'] < 4_000, sizes
           assert sizes['styles.css'] < 35_000, sizes
           assert sizes['responsive.css'] < 2_000, sizes
           assert sizes['polish.css'] < 16_000, sizes
           assert sizes['gallery.css'] < 8_000, sizes
           assert sizes['app.js'] < 20_000, sizes
           assert sizes['polish.js'] < 7_000, sizes
-          assert total < 85_000, (sizes, total)
-          print('Static payload bytes:', sizes, 'total=', total)
+          assert initial < 28_000, (sizes, initial)
+          assert total < 92_000, (sizes, total)
+          print('Initial critical bytes:', initial)
+          print('Full static bytes:', sizes, 'total=', total)
           PY
           ! grep -RIE 'service[_-]?role|sb_secret_|SUPABASE_SERVICE_ROLE' projects/mohamed-a-2026 --exclude='*.md'
           ! grep -RIE 'fonts\.googleapis|fonts\.gstatic|<video|<iframe' projects/mohamed-a-2026/index.html
@@ -107,6 +117,8 @@ jobs:
           grep -Fq "https://images.unsplash.com" projects/mohamed-a-2026/vercel.json
           grep -Fq "noindex, nofollow, noarchive" projects/mohamed-a-2026/vercel.json
           grep -Fq "./gallery.css" projects/mohamed-a-2026/polish.js
+          grep -Fq "garhy:experience-entered" projects/mohamed-a-2026/intro.js
+          grep -Fq "garhy:experience-entered" projects/mohamed-a-2026/app.js
 
       - name: Install browser QA dependencies
         run: |
