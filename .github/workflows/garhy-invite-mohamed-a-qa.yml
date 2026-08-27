@@ -51,10 +51,12 @@ jobs:
           class Parser(HTMLParser): pass
           Parser().feed((root / 'index.html').read_text(encoding='utf-8'))
 
-          sizes = {p.name: p.stat().st_size for p in [root/'index.html', root/'styles.css', root/'app.js', root/'event.json', root/'vercel.json']}
+          payload = [root/'index.html', root/'styles.css', root/'responsive.css', root/'app.js', root/'event.json', root/'vercel.json']
+          sizes = {p.name: p.stat().st_size for p in payload}
           total = sum(sizes.values())
           assert sizes['index.html'] < 30_000, sizes
           assert sizes['styles.css'] < 35_000, sizes
+          assert sizes['responsive.css'] < 2_000, sizes
           assert sizes['app.js'] < 20_000, sizes
           assert total < 75_000, (sizes, total)
           print('Static payload bytes:', sizes, 'total=', total)
