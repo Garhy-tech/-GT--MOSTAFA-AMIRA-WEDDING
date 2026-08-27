@@ -52,7 +52,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for file in index.html styles.css responsive.css polish.css app.js polish.js event.json vercel.json; do test -s "$PROJECT_DIR/$file"; done
+          for file in index.html intro.css styles.css responsive.css polish.css app.js polish.js event.json vercel.json; do test -s "$PROJECT_DIR/$file"; done
           node --check "$PROJECT_DIR/app.js"
           node --check "$PROJECT_DIR/polish.js"
           python - <<'PY'
@@ -96,7 +96,7 @@ jobs:
           set -euo pipefail
           rm -rf "$RELEASE_DIR"
           mkdir -p "$RELEASE_DIR/.vercel"
-          for file in index.html styles.css responsive.css polish.css app.js polish.js event.json vercel.json; do cp "$PROJECT_DIR/$file" "$RELEASE_DIR/$file"; done
+          for file in index.html intro.css styles.css responsive.css polish.css app.js polish.js event.json vercel.json; do cp "$PROJECT_DIR/$file" "$RELEASE_DIR/$file"; done
           jq -n --arg orgId "$VERCEL_ORG_ID" --arg projectId "$VERCEL_PROJECT_ID" --arg projectName "$PROJECT_NAME" '{orgId:$orgId,projectId:$projectId,projectName:$projectName}' > "$RELEASE_DIR/.vercel/project.json"
           test -s "$RELEASE_DIR/vercel.json"
 
@@ -120,6 +120,7 @@ jobs:
           set -euo pipefail
           npx --yes vercel@latest curl / --deployment "$PREVIEW_URL" > /tmp/mohamed-a-root.html
           grep -Fq 'MOHAMED' /tmp/mohamed-a-root.html
+          grep -Fq 'intro.css' /tmp/mohamed-a-root.html
           grep -Fq 'polish.css' /tmp/mohamed-a-root.html
           grep -Fq 'polish.js' /tmp/mohamed-a-root.html
           grep -Fq '03 / 09 / 2026' /tmp/mohamed-a-root.html
@@ -144,7 +145,7 @@ jobs:
             echo
             echo "Deployment: $PREVIEW_URL"
             echo
-            echo '✅ Isolated release directory and final polish assets verified.'
+            echo '✅ Isolated release directory and critical intro assets verified.'
             echo '✅ Preview feedback injection disabled.'
             echo '✅ Dates, pending henna location, and Shahrazad Hall verified.'
             echo '✅ Attendance response flow absent.'
