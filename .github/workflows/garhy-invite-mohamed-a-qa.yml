@@ -11,6 +11,7 @@ on:
       - 'tests/e2e/mohamed-a-intro-card-bounds.mjs'
       - 'tests/e2e/mohamed-a-visual-frames.mjs'
       - 'tests/e2e/mohamed-a-gallery.mjs'
+      - 'tests/e2e/mohamed-a-music.mjs'
       - '.github/workflows/garhy-invite-mohamed-a-qa.yml'
   pull_request:
     branches: [main]
@@ -21,6 +22,7 @@ on:
       - 'tests/e2e/mohamed-a-intro-card-bounds.mjs'
       - 'tests/e2e/mohamed-a-visual-frames.mjs'
       - 'tests/e2e/mohamed-a-gallery.mjs'
+      - 'tests/e2e/mohamed-a-music.mjs'
       - '.github/workflows/garhy-invite-mohamed-a-qa.yml'
 
 permissions:
@@ -46,12 +48,15 @@ jobs:
           node --check projects/mohamed-a-2026/intro.js
           node --check projects/mohamed-a-2026/app.js
           node --check projects/mohamed-a-2026/polish.js
+          node --check projects/mohamed-a-2026/music.js
           node --check tests/e2e/mohamed-a-festival-smoke.mjs
           node --check tests/e2e/mohamed-a-functional.mjs
           node --check tests/e2e/mohamed-a-intro-card-bounds.mjs
           node --check tests/e2e/mohamed-a-visual-frames.mjs
           node --check tests/e2e/mohamed-a-gallery.mjs
+          node --check tests/e2e/mohamed-a-music.mjs
           python3 - <<'PY'
+          import hashlib
           import json
           from html.parser import HTMLParser
           from pathlib import Path
@@ -79,6 +84,7 @@ jobs:
           assert 'data-gallery-zone' in html
           assert '<script src="./app.js"' not in html
           assert '<script src="./polish.js"' not in html
+          assert '<script src="./music.js"' not in html
           assert len(parser.images) == 3, parser.images
 
           for image in parser.images:
@@ -93,7 +99,18 @@ jobs:
               assert int(query.get('w',['0'])[0]) <= 1200, url
               assert int(query.get('q',['100'])[0]) <= 42, url
 
-          payload = [root/'index.html', root/'intro.css', root/'intro.js', root/'styles.css', root/'responsive.css', root/'polish.css', root/'gallery.css', root/'app.js', root/'polish.js', root/'event.json', root/'vercel.json']
+          track = root / 'media' / 'daweta-zewace.mp3'
+          source_track = Path('assets/v2/audio/daweta-zewace.mp3')
+          assert track.is_file() and track.stat().st_size == 3133484, track.stat().st_size
+          assert source_track.is_file()
+          digest = lambda p: hashlib.sha256(p.read_bytes()).hexdigest()
+          assert digest(track) == digest(source_track), 'Mohamed A soundtrack must remain an exact independent copy of the approved Mostafa & Amira asset'
+          music_js = (root / 'music.js').read_text(encoding='utf-8')
+          assert "audio.preload='none'" in music_js
+          assert "./media/daweta-zewace.mp3" in music_js
+          assert 'autoplay' not in music_js.lower()
+
+          payload = [root/'index.html', root/'intro.css', root/'intro.js', root/'styles.css', root/'responsive.css', root/'polish.css', root/'gallery.css', root/'app.js', root/'polish.js', root/'music.js', root/'event.json', root/'vercel.json']
           sizes = {p.name: p.stat().st_size for p in payload}
           total = sum(sizes.values())
           initial = sizes['index.html'] + sizes['intro.css'] + sizes['intro.js']
@@ -106,17 +123,21 @@ jobs:
           assert sizes['gallery.css'] < 8_000, sizes
           assert sizes['app.js'] < 20_000, sizes
           assert sizes['polish.js'] < 7_000, sizes
+          assert sizes['music.js'] < 5_000, sizes
           assert initial < 28_000, (sizes, initial)
           assert total < 92_000, (sizes, total)
           print('Initial critical bytes:', initial)
-          print('Full static bytes:', sizes, 'total=', total)
+          print('Full static bytes excluding lazy media:', sizes, 'total=', total)
+          print('Local soundtrack bytes:', track.stat().st_size)
           PY
           ! grep -RIE 'service[_-]?role|sb_secret_|SUPABASE_SERVICE_ROLE' projects/mohamed-a-2026 --exclude='*.md'
           ! grep -RIE 'fonts\.googleapis|fonts\.gstatic|<video|<iframe' projects/mohamed-a-2026/index.html
           grep -Fq "Content-Security-Policy" projects/mohamed-a-2026/vercel.json
           grep -Fq "https://images.unsplash.com" projects/mohamed-a-2026/vercel.json
+          grep -Fq "media-src 'self'" projects/mohamed-a-2026/vercel.json
           grep -Fq "noindex, nofollow, noarchive" projects/mohamed-a-2026/vercel.json
           grep -Fq "./gallery.css" projects/mohamed-a-2026/polish.js
+          grep -Fq "./music.js" projects/mohamed-a-2026/intro.js
           grep -Fq "garhy:experience-entered" projects/mohamed-a-2026/intro.js
           grep -Fq "garhy:experience-entered" projects/mohamed-a-2026/app.js
 
@@ -149,6 +170,9 @@ jobs:
 
       - name: Lazy 2026 gallery UX QA
         run: node tests/e2e/mohamed-a-gallery.mjs
+
+      - name: Local soundtrack lazy-load UX QA
+        run: node tests/e2e/mohamed-a-music.mjs
 
       - name: Upload QA screenshots
         if: always()
