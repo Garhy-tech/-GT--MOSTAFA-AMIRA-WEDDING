@@ -14,7 +14,9 @@
   <meta property="og:description" content="ليلة الحنة 03/09/2026 • ليلة الزفاف 04/09/2026" />
   <link rel="stylesheet" href="./styles.css" />
   <link rel="stylesheet" href="./responsive.css" />
+  <link rel="stylesheet" href="./polish.css" />
   <script src="./app.js" defer></script>
+  <script src="./polish.js" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#events">تخطَّ المقدمة وانتقل إلى تفاصيل الليلتين</a>
@@ -40,6 +42,7 @@
   <div class="laser laser-a" aria-hidden="true"></div>
   <div class="laser laser-b" aria-hidden="true"></div>
   <div class="stage-grid" aria-hidden="true"></div>
+  <div class="scroll-progress" aria-hidden="true"><i data-scroll-progress></i></div>
 
   <header class="topbar" data-shell>
     <a class="gt-mark" href="#top" aria-label="GARHY Invite — العودة إلى البداية">
@@ -67,27 +70,22 @@
         <div class="hero-kicker reveal">
           <span>GARHY INVITE</span><i></i><span>FESTIVAL MODE</span>
         </div>
-
         <h1 id="hero-title" class="hero-title reveal" aria-label="MOHAMED and A">
           <span class="name name-m" data-text="MOHAMED">MOHAMED</span>
           <span class="multiply" aria-hidden="true">×</span>
           <span class="name name-a" data-text="A">A</span>
         </h1>
-
         <p class="hero-line reveal">مش دعوة هادية.<br><strong>دي إشارة بدء الفرحة.</strong></p>
-
         <div class="date-rail reveal" aria-label="موعد الحنة والزفاف">
           <div><small>الخميس</small><strong>03</strong><span>SEP</span><em>ليلة الحنة</em></div>
           <i aria-hidden="true"></i>
           <div><small>الجمعة</small><strong>04</strong><span>SEP</span><em>ليلة الزفاف</em></div>
         </div>
-
         <div class="hero-actions reveal">
           <a class="hero-cta" href="#events"><span>تفاصيل الليلتين</span><b aria-hidden="true">↓</b></a>
           <button class="hero-share" type="button" data-share aria-label="مشاركة دعوة MOHAMED و A">شارك الدعوة</button>
         </div>
       </div>
-
       <div class="ticker" aria-hidden="true">
         <div class="ticker-track">MOHAMED × A • HENNA NIGHT • WEDDING NIGHT • DRUMS • SPARKS • FESTIVAL MODE • GARHY INVITE • MOHAMED × A • HENNA NIGHT • WEDDING NIGHT • DRUMS • SPARKS • FESTIVAL MODE • GARHY INVITE •</div>
       </div>
@@ -105,6 +103,10 @@
       </div>
       <p class="countdown-note">العد التنازلي حتى بداية يوم الجمعة 04 سبتمبر — توقيت القاهرة</p>
     </section>
+
+    <div class="impact-strip" aria-hidden="true">
+      <span>الخميس 03 سبتمبر</span><b>حنة</b><i>×</i><span>الجمعة 04 سبتمبر</span><b>زفاف</b>
+    </div>
 
     <section id="events" class="events section" aria-labelledby="events-title">
       <div class="section-code" aria-hidden="true">02 / TWO NIGHTS</div>
@@ -144,23 +146,28 @@
       </article>
     </section>
 
-    <section class="manifesto section" aria-labelledby="manifesto-title">
+    <section class="manifesto section" aria-labelledby="manifesto-title" data-pyro-zone>
       <div class="manifesto-wall" aria-hidden="true">LOUD / HALAL / JOY / DRUMS / SPARKS / LIGHTS /</div>
+      <div class="drop-rings" aria-hidden="true"><i></i><i></i><i></i></div>
+      <div class="drop-lines" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
       <div class="manifesto-inner reveal">
         <div class="section-code" aria-hidden="true">03 / FESTIVAL MODE</div>
         <p class="eyebrow">THE ENERGY</p>
-        <h2 id="manifesto-title">شماريخ.<br>درامز.<br><span>فرحة على الآخر.</span></h2>
-        <p>ستايل صاخب ومشاغب، لكن منظم ومحسوب — عشان كل حاجة تضرب في وقتها.</p>
+        <h2 id="manifesto-title"><span class="arabic-hit">شماريخ.</span><br><span class="arabic-hit">درامز.</span><br><span class="arabic-outlined">فرحة على الآخر.</span></h2>
+        <p>لحظة الدخول هنا معمولة كأن المسرح فتح مرة واحدة: ضوء، شرر، وإيقاع محسوب من غير زحمة.</p>
         <div class="manifesto-grid" aria-label="أجواء التصميم">
           <span>DRUMS</span><span>SPARKS</span><span>STAGE</span><span>LIGHTS</span><span>ENERGY</span>
         </div>
       </div>
     </section>
 
-    <section class="finale section reveal" aria-labelledby="finale-title">
+    <section class="finale section reveal" aria-labelledby="finale-title" data-finale-zone>
+      <div class="finale-flash" aria-hidden="true"></div>
+      <div class="finale-stage" aria-hidden="true"><i></i><i></i><i></i></div>
       <div class="finale-mark" aria-hidden="true">M × A</div>
-      <div>
-        <p class="eyebrow">SAVE THE DATES</p>
+      <div class="finale-copy">
+        <p class="eyebrow">THE FINAL DROP</p>
+        <p class="finale-names" aria-hidden="true"><span>MOHAMED</span><b>×</b><span>A</span></p>
         <h2 id="finale-title">03 + 04<br><span>SEPTEMBER</span></h2>
         <p>الخميس حنة. الجمعة زفاف. جهّزوا نفسكم.</p>
       </div>
