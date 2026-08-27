@@ -1,10 +1,22 @@
-# GARHY INVITE — Mostafa & Amira
+# GARHY Invite
 
-Flagship premium digital-event experience by **GARHY TECH**.
+**GARHY Invite** is the premium digital-invitations and event-experiences product by **GARHY TECH**.
+
+## Flagship event
+
+**Mostafa & Amira 2026** is the first flagship event case built on GARHY Invite. The couple/event name remains guest-facing event identity; it is no longer treated as the institutional product name.
+
+## Brand architecture
+
+```text
+GARHY TECH
+└── GARHY Invite
+    └── Mostafa & Amira 2026
+```
 
 ## Release architecture
 
-- `app-v2/` — canonical GARHY INVITE guest experience.
+- `app-v2/` — canonical GARHY Invite guest experience for the current flagship event.
 - `platform/` — reusable event schema, examples and runtime core.
 - `supabase/migrations/` — private RSVP / guest / invitation / pass backend contract.
 - `assets/`, legacy `index.html` and legacy `assets/js/app.js` — preserved rollback implementation.
@@ -24,9 +36,15 @@ V2 references the immutable production deployment `mostafa-amira-2026-rbi4w8d0t-
 - Digital guest-pass issuance primitive
 - Calendar, sharing, maps, music and gallery interactions
 - Privacy-conscious event telemetry
-- Reusable schema for weddings, birthdays, conferences, openings and other events
+- Reusable schema for weddings, engagements, birthdays, conferences, openings and other events
 - Mobile-first responsive experience and reduced-motion accessibility support
+
+## Naming rule
+
+Use **GARHY Invite** for the platform/product, reusable engine, institutional documentation and future corporate routes.
+
+Use **Mostafa & Amira 2026** only for the specific event configuration, guest-facing invitation, analytics/event records and historical rollback identifiers.
 
 ## Release rule
 
-The existing Vercel production alias is not changed by source merges. Domain binding and production promotion are a separate final release step after preview QA and backend activation.
+The existing Vercel production alias is not changed by this identity update. Domain binding, Vercel project renaming and production promotion remain separate release steps after preview QA, so existing invitation links and rollback anchors stay intact.
