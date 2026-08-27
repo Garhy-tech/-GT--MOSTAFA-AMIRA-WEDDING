@@ -1,0 +1,91 @@
+name: GARHY INVITE MOHAMED A Lighthouse 100
+
+on:
+  push:
+    branches:
+      - feature/mohamed-a-festival-2026
+    paths:
+      - 'projects/mohamed-a-2026/**'
+      - '.github/workflows/garhy-invite-mohamed-a-lighthouse.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'projects/mohamed-a-2026/**'
+      - '.github/workflows/garhy-invite-mohamed-a-lighthouse.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  lighthouse-100:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Start isolated static server
+        run: |
+          python3 -m http.server 4173 --bind 127.0.0.1 > /tmp/mohamed-a-lighthouse-http.log 2>&1 &
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:4173/projects/mohamed-a-2026/index.html >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/mohamed-a-lighthouse-http.log
+          exit 1
+
+      - name: Run Lighthouse mobile and desktop
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL='http://127.0.0.1:4173/projects/mohamed-a-2026/index.html'
+          npx --yes lighthouse@13.4.1 "$URL" \
+            --only-categories=performance,accessibility,best-practices \
+            --output=json --output-path=/tmp/lighthouse-mobile.json \
+            --chrome-flags='--headless --no-sandbox --disable-gpu' --quiet
+          npx --yes lighthouse@13.4.1 "$URL" \
+            --preset=desktop \
+            --only-categories=performance,accessibility,best-practices \
+            --output=json --output-path=/tmp/lighthouse-desktop.json \
+            --chrome-flags='--headless --no-sandbox --disable-gpu' --quiet
+
+      - name: Enforce literal 100 scores
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs=require('fs');
+          for(const mode of ['mobile','desktop']){
+            const report=JSON.parse(fs.readFileSync(`/tmp/lighthouse-${mode}.json`,'utf8'));
+            const scores={
+              performance:Math.round(report.categories.performance.score*100),
+              accessibility:Math.round(report.categories.accessibility.score*100),
+              bestPractices:Math.round(report.categories['best-practices'].score*100)
+            };
+            console.log(mode, scores);
+            for(const [key,value] of Object.entries(scores)){
+              if(value!==100) throw new Error(`${mode} ${key} score is ${value}, required 100`);
+            }
+          }
+          NODE
+          {
+            echo '## Lighthouse literal 100 gate'
+            echo
+            echo '✅ Mobile: Performance 100 / Accessibility 100 / Best Practices 100'
+            echo '✅ Desktop: Performance 100 / Accessibility 100 / Best Practices 100'
+            echo 'SEO is intentionally not scored because this review build is noindex by policy.'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload Lighthouse reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mohamed-a-lighthouse-${{ github.sha }}
+          path: /tmp/lighthouse-*.json
+          if-no-files-found: warn
+          retention-days: 14
