@@ -7,12 +7,14 @@ on:
     paths:
       - 'projects/mohamed-a-2026/**'
       - 'tests/e2e/mohamed-a-festival-smoke.mjs'
+      - 'tests/e2e/mohamed-a-functional.mjs'
       - '.github/workflows/garhy-invite-mohamed-a-qa.yml'
   pull_request:
     branches: [main]
     paths:
       - 'projects/mohamed-a-2026/**'
       - 'tests/e2e/mohamed-a-festival-smoke.mjs'
+      - 'tests/e2e/mohamed-a-functional.mjs'
       - '.github/workflows/garhy-invite-mohamed-a-qa.yml'
 
 permissions:
@@ -21,7 +23,7 @@ permissions:
 jobs:
   release-candidate-qa:
     runs-on: ubuntu-latest
-    timeout-minutes: 18
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -37,6 +39,8 @@ jobs:
           set -euo pipefail
           node --check projects/mohamed-a-2026/app.js
           node --check projects/mohamed-a-2026/polish.js
+          node --check tests/e2e/mohamed-a-festival-smoke.mjs
+          node --check tests/e2e/mohamed-a-functional.mjs
           python3 - <<'PY'
           import json
           from html.parser import HTMLParser
@@ -89,8 +93,11 @@ jobs:
           cat /tmp/mohamed-a-http.log
           exit 1
 
-      - name: Multi-viewport browser accessibility QA
+      - name: Full multi-viewport browser and accessibility QA
         run: node tests/e2e/mohamed-a-festival-smoke.mjs
+
+      - name: Calendar and sharing functional QA
+        run: node tests/e2e/mohamed-a-functional.mjs
 
       - name: Upload QA screenshots
         if: always()
