@@ -30,6 +30,7 @@ Status: preview-only release candidate.
 - [x] Hero MOHAMED typography remains inside viewport bounds
 - [x] Touch interactions remain at least 44 px while animated
 - [x] Real viewport captures for hero, countdown, henna card, wedding card, festival drop, and finale
+- [x] Visual-frame acceptance waits for reveal transitions to fully settle before capture
 - [x] No browser console, page, request, or same-origin HTTP errors
 - [x] Reduced-motion behavior verified
 - [x] Zero serious/critical Axe accessibility violations
@@ -39,6 +40,7 @@ Status: preview-only release candidate.
 - [x] Zero third-party critical-path requests
 - [x] No remote fonts/images/video
 - [x] Static payload guarded below 75 KB uncompressed
+- [x] Non-critical polish layer removed from first-paint blocking path
 - [x] Lighthouse mobile: Performance 100 / Accessibility 100 / Best Practices 100
 - [x] Lighthouse desktop: Performance 100 / Accessibility 100 / Best Practices 100
 - [x] SEO intentionally excluded from the review score because preview is noindex by policy
