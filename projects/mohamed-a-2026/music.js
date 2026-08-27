@@ -13,13 +13,17 @@ style.textContent=`.sound-button[data-music-toggle]{--music-progress:0;position:
 document.head.append(style);
 const audio=new Audio();
 audio.preload='none';audio.volume=.78;
-let sourced=false;
+let sourced=false,active=false;
 function setState(playing){button.setAttribute('aria-pressed',String(playing));button.setAttribute('aria-label',playing?'إيقاف أغنية الفرح':'تشغيل أغنية الفرح');if(label)label.textContent=playing?'MUSIC ON':'MUSIC'}
 function ensureSource(){if(sourced)return;sourced=true;audio.src='./media/daweta-zewace.mp3'}
-button.addEventListener('click',async()=>{if(!audio.paused){audio.pause();setState(false);return}ensureSource();try{await audio.play();setState(true)}catch(error){console.error('GARHY_MUSIC_PLAYBACK_FAILED',error);setState(false);if(label){label.textContent='RETRY';setTimeout(()=>{if(audio.paused)label.textContent='MUSIC'},1600)}}});
+button.addEventListener('click',async()=>{
+ if(active){active=false;audio.pause();setState(false);return}
+ active=true;ensureSource();setState(true);
+ try{await audio.play()}catch(error){active=false;console.error('GARHY_MUSIC_PLAYBACK_FAILED',error);setState(false);if(label){label.textContent='RETRY';setTimeout(()=>{if(!active)label.textContent='MUSIC'},1600)}}
+});
 audio.addEventListener('timeupdate',()=>{const value=audio.duration?Math.min(1,audio.currentTime/audio.duration):0;button.style.setProperty('--music-progress',value.toFixed(4))});
-audio.addEventListener('ended',()=>{audio.currentTime=0;button.style.setProperty('--music-progress','0');setState(false)});
-audio.addEventListener('error',()=>{setState(false);if(label)label.textContent='RETRY'});
-document.addEventListener('visibilitychange',()=>{if(document.hidden&&!audio.paused){audio.pause();setState(false)}});
-addEventListener('pagehide',()=>audio.pause());
+audio.addEventListener('ended',()=>{active=false;audio.currentTime=0;button.style.setProperty('--music-progress','0');setState(false)});
+audio.addEventListener('error',()=>{active=false;setState(false);if(label)label.textContent='RETRY'});
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&active){active=false;audio.pause();setState(false)}});
+addEventListener('pagehide',()=>{active=false;audio.pause()});
 })();
