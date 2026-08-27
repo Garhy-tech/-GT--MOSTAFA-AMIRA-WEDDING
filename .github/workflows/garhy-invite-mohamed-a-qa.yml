@@ -8,6 +8,7 @@ on:
       - 'projects/mohamed-a-2026/**'
       - 'tests/e2e/mohamed-a-festival-smoke.mjs'
       - 'tests/e2e/mohamed-a-functional.mjs'
+      - 'tests/e2e/mohamed-a-intro-card-bounds.mjs'
       - '.github/workflows/garhy-invite-mohamed-a-qa.yml'
   pull_request:
     branches: [main]
@@ -15,6 +16,7 @@ on:
       - 'projects/mohamed-a-2026/**'
       - 'tests/e2e/mohamed-a-festival-smoke.mjs'
       - 'tests/e2e/mohamed-a-functional.mjs'
+      - 'tests/e2e/mohamed-a-intro-card-bounds.mjs'
       - '.github/workflows/garhy-invite-mohamed-a-qa.yml'
 
 permissions:
@@ -23,7 +25,7 @@ permissions:
 jobs:
   release-candidate-qa:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 22
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -41,6 +43,7 @@ jobs:
           node --check projects/mohamed-a-2026/polish.js
           node --check tests/e2e/mohamed-a-festival-smoke.mjs
           node --check tests/e2e/mohamed-a-functional.mjs
+          node --check tests/e2e/mohamed-a-intro-card-bounds.mjs
           python3 - <<'PY'
           import json
           from html.parser import HTMLParser
@@ -95,6 +98,9 @@ jobs:
 
       - name: Full multi-viewport browser and accessibility QA
         run: node tests/e2e/mohamed-a-festival-smoke.mjs
+
+      - name: Intro card typography bounds QA
+        run: node tests/e2e/mohamed-a-intro-card-bounds.mjs
 
       - name: Calendar and sharing functional QA
         run: node tests/e2e/mohamed-a-functional.mjs
