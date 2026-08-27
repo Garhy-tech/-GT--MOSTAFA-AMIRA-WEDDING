@@ -32,24 +32,30 @@ try {
     await page.waitForTimeout(750);
 
     await page.locator('#hero-title').waitFor({ state: 'visible' });
-    assert.equal((await page.locator('body').innerText()).includes('MOHAMED'), true);
-    assert.equal((await page.locator('body').innerText()).includes('03 / 09 / 2026'), true);
-    assert.equal((await page.locator('body').innerText()).includes('04 / 09 / 2026'), true);
-    assert.equal((await page.locator('body').innerText()).includes('قاعة شهرزاد'), true);
-    assert.equal((await page.locator('body').innerText()).includes('سيتم إضافته قريبًا'), true);
+    const bodyText = await page.locator('body').innerText();
+    assert.equal(bodyText.includes('MOHAMED'), true);
+    assert.equal(bodyText.includes('03 / 09 / 2026'), true);
+    assert.equal(bodyText.includes('04 / 09 / 2026'), true);
+    assert.equal(bodyText.includes('قاعة شهرزاد'), true);
+    assert.equal(bodyText.includes('سيتم إضافته قريبًا'), true);
+    assert.equal(/RSVP|تأكيد الحضور|اعتذار/i.test(bodyText), false, `${viewport.name}: attendance response flow must remain absent`);
 
-    const forbidden = await page.locator('body').innerText();
-    assert.equal(/RSVP|تأكيد الحضور|اعتذار/i.test(forbidden), false, `${viewport.name}: attendance response flow must remain absent`);
-
-    const layout = await page.evaluate(() => ({
-      scrollWidth: document.documentElement.scrollWidth,
-      innerWidth: window.innerWidth,
-      inert: document.querySelectorAll('[inert]').length,
-      externalResources: performance.getEntriesByType('resource')
-        .map(entry => entry.name)
-        .filter(url => new URL(url).origin !== location.origin)
-    }));
+    const layout = await page.evaluate(() => {
+      const name = document.querySelector('.name-m')?.getBoundingClientRect();
+      return {
+        scrollWidth: document.documentElement.scrollWidth,
+        innerWidth: window.innerWidth,
+        inert: document.querySelectorAll('[inert]').length,
+        nameLeft: name?.left ?? 0,
+        nameRight: name?.right ?? 0,
+        externalResources: performance.getEntriesByType('resource')
+          .map(entry => entry.name)
+          .filter(url => new URL(url).origin !== location.origin)
+      };
+    });
     assert.ok(layout.scrollWidth <= layout.innerWidth + 1, `${viewport.name}: horizontal overflow ${layout.scrollWidth} > ${layout.innerWidth}`);
+    assert.ok(layout.nameLeft >= -1, `${viewport.name}: MOHAMED clips left at ${layout.nameLeft}`);
+    assert.ok(layout.nameRight <= layout.innerWidth + 1, `${viewport.name}: MOHAMED clips right at ${layout.nameRight}`);
     assert.equal(layout.inert, 0, `${viewport.name}: shell must be interactive after entry`);
     assert.deepEqual(layout.externalResources, [], `${viewport.name}: critical experience must have zero external resources`);
 
@@ -61,6 +67,13 @@ try {
     assert.deepEqual(blocking.map(v => ({ id: v.id, impact: v.impact, nodes: v.nodes.length })), [], `${viewport.name}: blocking accessibility violations`);
     assert.deepEqual(errors, [], `${viewport.name}: browser errors detected`);
 
+    const reveals = page.locator('.reveal');
+    for (let i = 0; i < await reveals.count(); i++) {
+      await reveals.nth(i).scrollIntoViewIfNeeded();
+      await page.waitForTimeout(70);
+    }
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.waitForTimeout(180);
     await page.screenshot({ path: `artifacts/mohamed-a-qa/${viewport.name}.png`, fullPage: true });
     await context.close();
   }
