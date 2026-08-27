@@ -22,6 +22,7 @@ async function start(){
    skip?.removeAttribute('inert');
    intro.classList.add('is-leaving');
    const top=document.querySelector('#top');if(top){top.tabIndex=-1;top.focus({preventScroll:true})}
+   document.dispatchEvent(new Event('garhy:experience-entered'));
    setTimeout(()=>intro.remove(),matchMedia('(prefers-reduced-motion: reduce)').matches?0:620);
  }catch(error){
    console.error(error);starting=false;enter.disabled=false;enter.removeAttribute('aria-busy');if(label)label.textContent='حاول مرة أخرى';document.body.removeAttribute('data-experience-booted');
