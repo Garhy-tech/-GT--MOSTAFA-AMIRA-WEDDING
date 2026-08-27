@@ -5,7 +5,8 @@ const skip=document.querySelector('.skip-link');
 const template=document.querySelector('[data-experience-template]');
 if(!intro||!enter||!template)return;
 skip?.setAttribute('inert','');
-requestAnimationFrame(()=>enter.focus({preventScroll:true}));
+if(matchMedia('(max-width:640px)').matches)document.querySelectorAll('.intro-burst').forEach(node=>node.remove());
+enter.focus({preventScroll:true});
 let starting=false;
 const originalLabel=enter.querySelector('span')?.textContent||'ادخل الليلة';
 function loadStyle(href){return new Promise((resolve,reject)=>{const link=document.createElement('link');link.rel='stylesheet';link.href=href;link.onload=()=>resolve(link);link.onerror=()=>reject(new Error(`تعذر تحميل ${href}`));document.head.append(link)})}
