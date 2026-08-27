@@ -1,10 +1,11 @@
 const qs=(s,r=document)=>r.querySelector(s);const qsa=(s,r=document)=>[...r.querySelectorAll(s)];
 const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const coarsePointer=matchMedia('(pointer: coarse)').matches;
+const polishPreload=qs('[data-polish-preload]');function activatePolish(){if(!polishPreload||polishPreload.rel==='stylesheet')return;polishPreload.rel='stylesheet';polishPreload.removeAttribute('as')}if(polishPreload){requestAnimationFrame(()=>requestAnimationFrame(activatePolish))}
 
 const toast=qs('[data-toast]');let toastTimer;function showToast(message){if(!toast)return;toast.textContent=message;toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),2400)}
 
-const intro=qs('[data-intro]');const enterButton=qs('[data-enter]');const shell=[...qsa('[data-shell]'),qs('.skip-link')].filter(Boolean);function lockShell(locked){for(const el of shell){if(locked)el.setAttribute('inert','');else el.removeAttribute('inert')}}function enterExperience(){if(!intro||intro.classList.contains('is-leaving'))return;intro.classList.add('is-leaving');lockShell(false);setTimeout(()=>intro.remove(),reduceMotion?0:650);const top=qs('#top');if(top){top.tabIndex=-1;top.focus({preventScroll:true})}launchCelebration()}
+const intro=qs('[data-intro]');const enterButton=qs('[data-enter]');const shell=[...qsa('[data-shell]'),qs('.skip-link')].filter(Boolean);function lockShell(locked){for(const el of shell){if(locked)el.setAttribute('inert','');else el.removeAttribute('inert')}}function enterExperience(){if(!intro||intro.classList.contains('is-leaving'))return;activatePolish();intro.classList.add('is-leaving');lockShell(false);setTimeout(()=>intro.remove(),reduceMotion?0:650);const top=qs('#top');if(top){top.tabIndex=-1;top.focus({preventScroll:true})}launchCelebration()}
 if(intro&&enterButton){lockShell(true);requestAnimationFrame(()=>enterButton.focus({preventScroll:true}));enterButton.addEventListener('click',enterExperience);intro.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target===intro)enterExperience()})}
 
 const revealItems=qsa('.reveal');if(!('IntersectionObserver'in window)||reduceMotion){revealItems.forEach(el=>el.classList.add('visible'))}else{const observer=new IntersectionObserver(entries=>{for(const entry of entries){if(entry.isIntersecting){entry.target.classList.add('visible');observer.unobserve(entry.target)}}},{threshold:.12,rootMargin:'0px 0px -6%'});revealItems.forEach(el=>observer.observe(el))}
