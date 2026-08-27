@@ -36,6 +36,7 @@ jobs:
         run: |
           set -euo pipefail
           node --check projects/mohamed-a-2026/app.js
+          node --check projects/mohamed-a-2026/polish.js
           python3 - <<'PY'
           import json
           from html.parser import HTMLParser
@@ -48,16 +49,23 @@ jobs:
           assert data['events'][0]['location'] is None
           assert data['events'][1]['location']['name'] == 'قاعة شهرزاد'
 
+          html = (root / 'index.html').read_text(encoding='utf-8')
           class Parser(HTMLParser): pass
-          Parser().feed((root / 'index.html').read_text(encoding='utf-8'))
+          Parser().feed(html)
+          assert 'polish.css' in html
+          assert 'polish.js' in html
+          assert 'data-pyro-zone' in html
+          assert 'data-finale-zone' in html
 
-          payload = [root/'index.html', root/'styles.css', root/'responsive.css', root/'app.js', root/'event.json', root/'vercel.json']
+          payload = [root/'index.html', root/'styles.css', root/'responsive.css', root/'polish.css', root/'app.js', root/'polish.js', root/'event.json', root/'vercel.json']
           sizes = {p.name: p.stat().st_size for p in payload}
           total = sum(sizes.values())
-          assert sizes['index.html'] < 30_000, sizes
+          assert sizes['index.html'] < 32_000, sizes
           assert sizes['styles.css'] < 35_000, sizes
           assert sizes['responsive.css'] < 2_000, sizes
+          assert sizes['polish.css'] < 16_000, sizes
           assert sizes['app.js'] < 20_000, sizes
+          assert sizes['polish.js'] < 5_000, sizes
           assert total < 75_000, (sizes, total)
           print('Static payload bytes:', sizes, 'total=', total)
           PY
