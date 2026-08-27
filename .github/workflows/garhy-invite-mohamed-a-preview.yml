@@ -20,6 +20,7 @@ jobs:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       PROJECT_NAME: garhy-invite-mohamed-a-2026-preview
       PROJECT_DIR: projects/mohamed-a-2026
+      RELEASE_DIR: /tmp/garhy-invite-mohamed-a-release
     steps:
       - name: Checkout tested source
         uses: actions/checkout@v4
@@ -35,13 +36,13 @@ jobs:
               echo '## MOHAMED × A Vercel Preview'
               echo
               echo 'Preview deployment was not attempted because repository secret `VERCEL_TOKEN` is not configured.'
-              echo 'No production project, domain, alias, or existing GARHY Invite deployment was modified.'
+              echo 'No existing GARHY production project, domain, or alias was modified.'
             } >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
           echo 'ready=true' >> "$GITHUB_OUTPUT"
 
-      - name: Validate isolated client release
+      - name: Validate isolated client source
         if: steps.preflight.outputs.ready == 'true'
         shell: bash
         run: |
@@ -55,8 +56,7 @@ jobs:
           python - <<'PY'
           import json
           from pathlib import Path
-          p=Path('projects/mohamed-a-2026/event.json')
-          data=json.loads(p.read_text(encoding='utf-8'))
+          data=json.loads(Path('projects/mohamed-a-2026/event.json').read_text(encoding='utf-8'))
           assert data['slug']=='mohamed-a-2026'
           assert data['rsvp'] is False
           assert data['events'][0]['date']=='2026-09-03'
@@ -67,7 +67,7 @@ jobs:
           PY
           ! grep -RIE 'service[_-]?role|sb_secret_|SUPABASE_SERVICE_ROLE' "$PROJECT_DIR" --exclude='*.md'
 
-      - name: Resolve or create isolated Vercel preview project
+      - name: Resolve and harden isolated Vercel project
         if: steps.preflight.outputs.ready == 'true'
         shell: bash
         run: |
@@ -82,31 +82,48 @@ jobs:
               "${auth[@]}" \
               -H 'Content-Type: application/json' \
               "https://api.vercel.com/v9/projects?teamId=$VERCEL_ORG_ID" \
-              --data "{\"name\":\"$PROJECT_NAME\",\"enablePreviewFeedback\":true,\"enableProductionFeedback\":false}")"
+              --data "{\"name\":\"$PROJECT_NAME\",\"enablePreviewFeedback\":false,\"enableProductionFeedback\":false}")"
             case "$create_status" in
               200|201) ;;
-              *)
-                echo "Failed to create isolated Vercel project (HTTP $create_status)." >&2
-                jq '{error, message}' /tmp/vercel-project.json 2>/dev/null || true
-                exit 1
-                ;;
+              *) echo "Failed to create isolated Vercel project (HTTP $create_status)." >&2; cat /tmp/vercel-project.json >&2; exit 1 ;;
             esac
           elif [ "$status" != '200' ]; then
             echo "Failed to inspect isolated Vercel project (HTTP $status)." >&2
-            jq '{error, message}' /tmp/vercel-project.json 2>/dev/null || true
+            cat /tmp/vercel-project.json >&2
             exit 1
           fi
 
           project_id="$(jq -r '.id // empty' /tmp/vercel-project.json)"
           test -n "$project_id"
           echo "VERCEL_PROJECT_ID=$project_id" >> "$GITHUB_ENV"
-          mkdir -p "$PROJECT_DIR/.vercel"
+
+          patch_status="$(curl -sS -o /tmp/vercel-project-patch.json -w '%{http_code}' \
+            -X PATCH \
+            "${auth[@]}" \
+            -H 'Content-Type: application/json' \
+            "https://api.vercel.com/v9/projects/$project_id?teamId=$VERCEL_ORG_ID" \
+            --data '{"enablePreviewFeedback":false,"enableProductionFeedback":false}')"
+          [ "$patch_status" = '200' ] || { echo "Failed to harden preview project (HTTP $patch_status)." >&2; cat /tmp/vercel-project-patch.json >&2; exit 1; }
+
+      - name: Assemble release outside Git root
+        if: steps.preflight.outputs.ready == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$RELEASE_DIR"
+          mkdir -p "$RELEASE_DIR/.vercel"
+          cp "$PROJECT_DIR/index.html" "$RELEASE_DIR/index.html"
+          cp "$PROJECT_DIR/styles.css" "$RELEASE_DIR/styles.css"
+          cp "$PROJECT_DIR/app.js" "$RELEASE_DIR/app.js"
+          cp "$PROJECT_DIR/event.json" "$RELEASE_DIR/event.json"
+          cp "$PROJECT_DIR/vercel.json" "$RELEASE_DIR/vercel.json"
           jq -n \
             --arg orgId "$VERCEL_ORG_ID" \
-            --arg projectId "$project_id" \
+            --arg projectId "$VERCEL_PROJECT_ID" \
             --arg projectName "$PROJECT_NAME" \
             '{orgId:$orgId,projectId:$projectId,projectName:$projectName}' \
-            > "$PROJECT_DIR/.vercel/project.json"
+            > "$RELEASE_DIR/.vercel/project.json"
+          test -s "$RELEASE_DIR/vercel.json"
 
       - name: Deploy isolated preview
         if: steps.preflight.outputs.ready == 'true'
@@ -114,7 +131,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          url="$(npx --yes vercel@latest deploy --yes --cwd "$PROJECT_DIR" --token="$VERCEL_TOKEN" | tail -n 1)"
+          url="$(npx --yes vercel@latest deploy --yes --cwd "$RELEASE_DIR" --token="$VERCEL_TOKEN" | tail -n 1)"
           case "$url" in
             https://*) ;;
             *) echo "Vercel did not return a deployment URL: $url" >&2; exit 1 ;;
@@ -122,7 +139,7 @@ jobs:
           echo "url=$url" >> "$GITHUB_OUTPUT"
           printf '%s\n' "$url" > mohamed-a-preview-url.txt
 
-      - name: Verify deployed preview contract
+      - name: Verify deployed preview and headers
         if: steps.preflight.outputs.ready == 'true'
         shell: bash
         env:
@@ -133,10 +150,11 @@ jobs:
           grep -Fq 'MOHAMED' /tmp/mohamed-a-root.html
           grep -Fq '03 / 09 / 2026' /tmp/mohamed-a-root.html
           grep -Fq '04 / 09 / 2026' /tmp/mohamed-a-root.html
-          grep -Fq 'يتحدد لاحقًا' /tmp/mohamed-a-root.html
+          grep -Fq 'سيتم إضافته قريبًا' /tmp/mohamed-a-root.html
           grep -Fq 'قاعة شهرزاد' /tmp/mohamed-a-root.html
+          ! grep -Fq 'vercel.live' /tmp/mohamed-a-root.html
           if grep -Eiq 'RSVP|تأكيد الحضور|اعتذار' /tmp/mohamed-a-root.html; then
-            echo 'Unexpected RSVP/attendance flow detected in client preview.' >&2
+            echo 'Unexpected attendance response flow detected in client preview.' >&2
             exit 1
           fi
 
@@ -144,17 +162,27 @@ jobs:
           grep -Fq '"slug": "mohamed-a-2026"' /tmp/mohamed-a-event.json
           grep -Fq '"rsvp": false' /tmp/mohamed-a-event.json
 
+          npx --yes vercel@latest curl / --deployment "$PREVIEW_URL" -I > /tmp/mohamed-a-headers.txt
+          tr '[:upper:]' '[:lower:]' < /tmp/mohamed-a-headers.txt > /tmp/mohamed-a-headers-lower.txt
+          grep -Fq "content-security-policy:" /tmp/mohamed-a-headers-lower.txt
+          grep -Fq "default-src 'self'" /tmp/mohamed-a-headers-lower.txt
+          grep -Fq 'cache-control: no-store' /tmp/mohamed-a-headers-lower.txt
+          grep -Fq 'x-robots-tag: noindex' /tmp/mohamed-a-headers-lower.txt
+          ! grep -Fq 'fonts.googleapis.com' /tmp/mohamed-a-headers-lower.txt
+          ! grep -Fq 'supabase.co' /tmp/mohamed-a-headers-lower.txt
+
           {
             echo '## MOHAMED × A Vercel Preview'
             echo
             echo "Deployment: $PREVIEW_URL"
             echo
-            echo '✅ Independent Vercel review project.'
-            echo '✅ Current run uses a non-`--prod` deployment; after bootstrap this is a Preview deployment.'
-            echo '✅ Henna date and pending location verified.'
-            echo '✅ Wedding date and Shahrazad Hall verified.'
-            echo '✅ RSVP / attendance / decline flow absent.'
-            echo '✅ Existing Mostafa & Amira Vercel project and aliases untouched.'
+            echo '✅ Release assembled outside the Wedding Git root.'
+            echo '✅ Isolated Vercel Preview project; feedback injection disabled.'
+            echo '✅ Dates, pending henna location, and Shahrazad Hall verified.'
+            echo '✅ Attendance response flow absent.'
+            echo '✅ Strict CSP/no-store/noindex headers verified on the edge response.'
+            echo '✅ Legacy Google Fonts and Supabase allowances absent.'
+            echo '✅ Existing Mostafa & Amira project and aliases untouched.'
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload preview URL record
