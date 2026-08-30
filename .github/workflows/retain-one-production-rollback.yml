@@ -1,0 +1,148 @@
+name: Retain one verified production rollback
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  cleanup:
+    if: github.event.pull_request.head.ref == 'ops/retain-one-production-rollback-20260830'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Retain current production and one rollback only
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          node <<'NODE'
+          const teamId = 'team_mZ52AwdCUXSmkLKH3YMqqf5U';
+          const projects = [
+            { id: 'prj_Y6mgWCmrkhrcAgYVmSueGkBghZyB', name: 'bank-transfer-card' },
+            { id: 'prj_HU1CuB2UAPwbLqO9FhzQoGKHVRjm', name: 'garhy-gpt-oss-cloud' },
+            { id: 'prj_7r5uJUxlMQ6odx99vehYHYBIXJC3', name: 'mostafa-amira-2026' }
+          ];
+          const token = process.env.VERCEL_TOKEN;
+          if (!token) throw new Error('Missing Vercel credential');
+          const idOf = deployment => deployment?.uid || deployment?.id || null;
+
+          async function request(method, path) {
+            const response = await fetch('https://api.vercel.com' + path, {
+              method,
+              headers: { Authorization: 'Bearer ' + token }
+            });
+            const text = await response.text();
+            let data = {};
+            try { data = text ? JSON.parse(text) : {}; } catch {}
+            return { response, data };
+          }
+
+          async function listAll(projectId) {
+            const all = [], seen = new Set();
+            let until = null;
+            for (let page = 0; page < 20; page++) {
+              const suffix = until ? '&until=' + encodeURIComponent(until) : '';
+              const result = await request('GET', '/v6/deployments?projectId=' + projectId + '&teamId=' + teamId + '&limit=100' + suffix);
+              if (!result.response.ok) throw new Error('Unable to list deployments');
+              const rows = result.data.deployments || [];
+              for (const row of rows) {
+                const id = idOf(row);
+                if (id && !seen.has(id)) { seen.add(id); all.push(row); }
+              }
+              const next = result.data.pagination?.next;
+              if (!next || next === until || rows.length === 0) break;
+              until = next;
+            }
+            return all;
+          }
+
+          async function aliasTarget(alias) {
+            const encoded = encodeURIComponent(alias);
+            for (const version of ['v4', 'v2']) {
+              const result = await request('GET', '/' + version + '/aliases/' + encoded + '?teamId=' + teamId);
+              if (result.response.status === 404) continue;
+              if (!result.response.ok) throw new Error('Unable to verify alias ownership');
+              const id = result.data.deploymentId || result.data.deployment?.id || result.data.deployment?.uid || null;
+              if (!id) throw new Error('Alias has no deployment owner');
+              return id;
+            }
+            throw new Error('Alias not found');
+          }
+
+          const candidates = [];
+          const retained = [];
+          const holds = [];
+
+          for (const expected of projects) {
+            const project = await request('GET', '/v9/projects/' + expected.id + '?teamId=' + teamId);
+            if (!project.response.ok || project.data.name !== expected.name) {
+              holds.push({ project: expected.name, reason: 'project identity mismatch' });
+              continue;
+            }
+            const domains = project.data.domains || [];
+            if (!domains.every(domain => typeof domain === 'string' && domain.endsWith('.vercel.app'))) {
+              holds.push({ project: expected.name, reason: 'external custom domain present' });
+              continue;
+            }
+
+            const rows = (await listAll(expected.id))
+              .filter(row => row.target === 'production' && row.state === 'READY')
+              .sort((a, b) => b.created - a.created);
+            if (rows.length <= 2) {
+              retained.push({ project: expected.name, count: rows.length });
+              continue;
+            }
+
+            const currentId = idOf(rows[0]);
+            for (const deployment of rows.slice(0, 2)) retained.push({ project: expected.name, id: idOf(deployment) });
+            for (const old of rows.slice(2)) {
+              const oldId = idOf(old);
+              const fetched = await request('GET', '/v13/deployments/' + oldId + '?teamId=' + teamId);
+              const detail = fetched.data.deployment || fetched.data;
+              const detailId = idOf(detail);
+              const projectMatch = (detail.projectId || detail.project?.id || null) === expected.id;
+              const aliases = detail.alias || [];
+              const safe =
+                fetched.response.ok &&
+                detailId === oldId &&
+                projectMatch &&
+                detail.target === 'production' &&
+                detail.readyState === 'READY' &&
+                aliases.every(alias => typeof alias === 'string' && alias.endsWith('.vercel.app'));
+              if (!safe) {
+                holds.push({ project: expected.name, id: oldId, reason: 'production metadata or alias shape differs' });
+                continue;
+              }
+              const targets = [];
+              for (const alias of aliases) targets.push(await aliasTarget(alias));
+              if (!targets.every(id => id === currentId)) {
+                holds.push({ project: expected.name, id: oldId, reason: 'alias does not resolve to current production' });
+                continue;
+              }
+              candidates.push({ project: expected.name, id: oldId });
+            }
+          }
+
+          if (holds.length) {
+            console.log(JSON.stringify({ outcome: 'hold', retainedCount: retained.length, holdCount: holds.length }));
+            throw new Error('Safety verification did not approve every old production deployment; no deletions made');
+          }
+
+          for (const candidate of candidates) {
+            const deleted = await request('DELETE', '/v13/deployments/' + candidate.id + '?teamId=' + teamId);
+            if (!deleted.response.ok) throw new Error('Delete failed for approved history');
+            const post = await request('GET', '/v13/deployments/' + candidate.id + '?teamId=' + teamId);
+            if (post.response.status !== 404) throw new Error('Post-delete verification failed');
+          }
+
+          console.log(JSON.stringify({ outcome: 'deleted', deletedCount: candidates.length, retainedCount: retained.length }));
+          NODE
+      - name: Remove temporary source branch
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          curl --fail --silent --show-error             -X DELETE             -H "Authorization: Bearer $GITHUB_TOKEN"             -H "Accept: application/vnd.github+json"             "https://api.github.com/repos/Garhy-tech/-GT--MOSTAFA-AMIRA-WEDDING/git/refs/heads/ops/retain-one-production-rollback-20260830"
