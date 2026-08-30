@@ -169,6 +169,29 @@ jobs:
           cat /tmp/mohamed-a-http.log
           exit 1
 
+      - name: Diagnose browser resource URLs
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import { chromium } from 'playwright';
+          const browser=await chromium.launch({headless:true});
+          const context=await browser.newContext({viewport:{width:280,height:653},isMobile:true,hasTouch:true});
+          const page=await context.newPage();
+          page.on('console',msg=>{if(msg.type()==='error')console.log('CONSOLE_ERROR',JSON.stringify({text:msg.text(),location:msg.location()}))});
+          page.on('requestfailed',req=>console.log('REQUEST_FAILED',JSON.stringify({url:req.url(),failure:req.failure()})));
+          const cdp=await context.newCDPSession(page);
+          const requests=new Map();
+          await cdp.send('Network.enable');
+          await cdp.send('Log.enable');
+          cdp.on('Network.requestWillBeSent',e=>requests.set(e.requestId,e.request.url));
+          cdp.on('Network.loadingFailed',e=>console.log('NETWORK_LOADING_FAILED',JSON.stringify({url:requests.get(e.requestId)||'',errorText:e.errorText,type:e.type,blockedReason:e.blockedReason||''})));
+          cdp.on('Log.entryAdded',({entry})=>{if(entry.level==='error')console.log('CDP_LOG_ERROR',JSON.stringify({text:entry.text,url:entry.url||'',source:entry.source,lineNumber:entry.lineNumber}))});
+          await page.goto('http://127.0.0.1:4173/projects/mohamed-a-2026/index.html',{waitUntil:'networkidle'});
+          await page.locator('[data-enter]').click();
+          await page.waitForTimeout(1200);
+          await browser.close();
+          NODE
+
       - name: Full multi-viewport browser and accessibility QA
         run: node tests/e2e/mohamed-a-festival-smoke.mjs
 
