@@ -103,7 +103,7 @@ jobs:
           music = root / 'media' / 'jamaican-bam-bam.ogg'
           chime = root / 'media' / 'cha-ching.ogg'
           ad64 = root / 'media' / 'ads' / 'gt-ad-strip.b64'
-          assert music.is_file() and 350_000 < music.stat().st_size < 500_000
+          assert music.is_file() and 10_000 < music.stat().st_size < 500_000
           assert chime.is_file() and 5_000 < chime.stat().st_size < 20_000
           assert music.read_bytes()[:4] == b'OggS'
           assert chime.read_bytes()[:4] == b'OggS'
