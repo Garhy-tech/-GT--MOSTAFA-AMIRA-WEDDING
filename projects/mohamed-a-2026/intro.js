@@ -11,26 +11,33 @@ enter.focus({preventScroll:true});
 const MUSIC_SRC='./media/jamaican-bam-bam.ogg';
 const CHIME_SRC='./media/cha-ching.ogg';
 const VALID_PIXEL='data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
-const music=new Audio();
-music.preload='none';
-music.src=MUSIC_SRC;
-music.volume=.56;
-music.loop=true;
 const audioState={
-  music,
+  music:null,
   started:false,
   fxCount:0,
-  async startMusic(){
-    if(!music.paused)return true;
-    try{
-      await music.play();
-      this.started=true;
-      return true;
-    }catch(error){
+  playPromise:null,
+  ensureMusic(){
+    if(this.music)return this.music;
+    const music=new Audio();
+    music.preload='none';
+    music.src=MUSIC_SRC;
+    music.volume=.56;
+    music.loop=true;
+    music.addEventListener('play',()=>{this.started=true});
+    music.addEventListener('pause',()=>{this.started=false});
+    this.music=music;
+    return music;
+  },
+  startMusic(){
+    const music=this.ensureMusic();
+    if(!music.paused){this.started=true;return Promise.resolve(true)}
+    if(this.playPromise)return this.playPromise;
+    this.playPromise=music.play().then(()=>{this.started=true;return true}).catch(error=>{
       this.started=false;
       console.warn('GARHY_MUSIC_FIRST_GESTURE_BLOCKED',error);
       return false;
-    }
+    }).finally(()=>{this.playPromise=null});
+    return this.playPromise;
   },
   feedback(){
     this.fxCount+=1;
@@ -48,8 +55,8 @@ window.__garhyAudio=audioState;
 document.addEventListener('click',event=>{
   const target=event.target instanceof Element?event.target.closest('button,a[href]'):null;
   if(!target||target.hasAttribute('disabled')||target.getAttribute('aria-disabled')==='true')return;
-  audioState.feedback();
   if(!audioState.started)void audioState.startMusic();
+  audioState.feedback();
 },{capture:true});
 
 const note=document.querySelector('.intro-note');
@@ -61,6 +68,7 @@ function loadStyle(href){return new Promise((resolve,reject)=>{const link=docume
 function loadScript(src){return new Promise((resolve,reject)=>{const script=document.createElement('script');script.src=src;script.async=false;script.onload=()=>resolve(script);script.onerror=()=>reject(new Error(`تعذر تحميل ${src}`));document.head.append(script)})}
 async function start(){
  if(starting)return;starting=true;
+ if(!audioState.started)void audioState.startMusic();
  enter.disabled=true;enter.setAttribute('aria-busy','true');intro.classList.add('is-entering');
  const label=enter.querySelector('span');if(label)label.textContent='يلا بينا';
  try{
