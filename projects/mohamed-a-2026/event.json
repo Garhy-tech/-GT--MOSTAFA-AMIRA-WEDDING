@@ -1,0 +1,39 @@
+{
+  "product": "GARHY Invite",
+  "edition": "Festival Edition",
+  "slug": "mohamed-a-2026",
+  "groom": "MOHAMED",
+  "brideDisplay": "A",
+  "locale": "ar-EG",
+  "direction": "rtl",
+  "rsvp": false,
+  "events": [
+    {
+      "type": "henna",
+      "titleAr": "ليلة الحنة",
+      "date": "2026-09-03",
+      "dayAr": "الخميس",
+      "location": null,
+      "locationStatus": "pending"
+    },
+    {
+      "type": "wedding",
+      "titleAr": "ليلة الزفاف",
+      "date": "2026-09-04",
+      "dayAr": "الجمعة",
+      "location": {
+        "name": "قاعة شهرزاد",
+        "city": "سنورس",
+        "region": "الفيوم",
+        "coordinates": [29.4246933, 30.8712702]
+      }
+    }
+  ],
+  "theme": {
+    "name": "Shaabi Luxe / Festival Mode",
+    "base": "#09080B",
+    "fire": "#E32835",
+    "spark": "#FF6A00",
+    "gold": "#D7A94F"
+  }
+}

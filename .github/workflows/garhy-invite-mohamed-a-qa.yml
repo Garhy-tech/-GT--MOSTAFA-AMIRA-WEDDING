@@ -1,0 +1,220 @@
+name: GARHY INVITE MOHAMED A QA
+
+on:
+  push:
+    branches:
+      - feature/mohamed-a-festival-2026
+    paths:
+      - 'projects/mohamed-a-2026/**'
+      - 'tests/e2e/mohamed-a-festival-smoke.mjs'
+      - 'tests/e2e/mohamed-a-functional.mjs'
+      - 'tests/e2e/mohamed-a-intro-card-bounds.mjs'
+      - 'tests/e2e/mohamed-a-visual-frames.mjs'
+      - 'tests/e2e/mohamed-a-gallery.mjs'
+      - 'tests/e2e/mohamed-a-music.mjs'
+      - '.github/workflows/garhy-invite-mohamed-a-qa.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'projects/mohamed-a-2026/**'
+      - 'tests/e2e/mohamed-a-festival-smoke.mjs'
+      - 'tests/e2e/mohamed-a-functional.mjs'
+      - 'tests/e2e/mohamed-a-intro-card-bounds.mjs'
+      - 'tests/e2e/mohamed-a-visual-frames.mjs'
+      - 'tests/e2e/mohamed-a-gallery.mjs'
+      - 'tests/e2e/mohamed-a-music.mjs'
+      - '.github/workflows/garhy-invite-mohamed-a-qa.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  release-candidate-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 26
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          package-manager-cache: false
+
+      - name: Static quality and staged-load performance budget
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check projects/mohamed-a-2026/intro.js
+          node --check projects/mohamed-a-2026/app.js
+          node --check projects/mohamed-a-2026/polish.js
+          node --check projects/mohamed-a-2026/music.js
+          node --check tests/e2e/mohamed-a-festival-smoke.mjs
+          node --check tests/e2e/mohamed-a-functional.mjs
+          node --check tests/e2e/mohamed-a-intro-card-bounds.mjs
+          node --check tests/e2e/mohamed-a-visual-frames.mjs
+          node --check tests/e2e/mohamed-a-gallery.mjs
+          node --check tests/e2e/mohamed-a-music.mjs
+          python3 - <<'PY'
+          import base64
+          import json
+          from html.parser import HTMLParser
+          from pathlib import Path
+          from urllib.parse import urlparse, parse_qs
+
+          root = Path('projects/mohamed-a-2026')
+          data = json.loads((root / 'event.json').read_text(encoding='utf-8'))
+          assert data['slug'] == 'mohamed-a-2026'
+          assert data['rsvp'] is False
+          assert data['events'][0]['location'] is None
+          assert data['events'][1]['location']['name'] == 'قاعة شهرزاد'
+
+          html = (root / 'index.html').read_text(encoding='utf-8')
+          class Parser(HTMLParser):
+              def __init__(self):
+                  super().__init__(); self.images=[]
+              def handle_starttag(self, tag, attrs):
+                  if tag == 'img': self.images.append(dict(attrs))
+          parser=Parser(); parser.feed(html)
+
+          assert './intro.js' in html
+          assert 'data-experience-template' in html
+          assert 'data-pyro-zone' in html
+          assert 'data-finale-zone' in html
+          assert 'data-gallery-zone' in html
+          assert '<script src="./app.js"' not in html
+          assert '<script src="./polish.js"' not in html
+          assert '<script src="./music.js"' not in html
+          assert len(parser.images) == 3, parser.images
+
+          for image in parser.images:
+              assert image.get('src','').startswith('data:image/gif;base64,')
+              assert image.get('loading') == 'lazy'
+              assert image.get('decoding') == 'async'
+              assert image.get('fetchpriority') == 'low'
+              assert int(image.get('width','0')) > 0 and int(image.get('height','0')) > 0
+              url=image.get('data-src',''); parsed=urlparse(url); query=parse_qs(parsed.query)
+              assert parsed.scheme == 'https' and parsed.netloc == 'images.unsplash.com', url
+              assert query.get('fm') == ['webp'], url
+              assert int(query.get('w',['0'])[0]) <= 1200, url
+              assert int(query.get('q',['100'])[0]) <= 42, url
+
+          music = root / 'media' / 'jamaican-bam-bam.ogg'
+          chime = root / 'media' / 'cha-ching.ogg'
+          ad64 = root / 'media' / 'ads' / 'gt-ad-strip.b64'
+          assert music.is_file() and 10_000 < music.stat().st_size < 500_000
+          assert chime.is_file() and 5_000 < chime.stat().st_size < 20_000
+          assert chime.read_bytes()[:4] == b'OggS'
+          encoded = ''.join(ad64.read_text(encoding='utf-8').split())
+          raw = base64.b64decode(encoded, validate=True)
+          assert raw[:4] == b'RIFF' and raw[8:12] == b'WEBP'
+          assert len(raw) < 30_000, len(raw)
+
+          intro_js = (root / 'intro.js').read_text(encoding='utf-8')
+          music_js = (root / 'music.js').read_text(encoding='utf-8')
+          assert './media/jamaican-bam-bam.ogg' in intro_js
+          assert './media/cha-ching.ogg' in intro_js
+          assert 'navigator.vibrate' in intro_js
+          assert './media/ads/gt-ad-strip.b64' in music_js
+          assert 'data-gt-ads' in music_js
+          assert "preload='none'" in intro_js
+          assert 'autoplay' not in (intro_js + music_js).lower()
+
+          payload = [root/'index.html', root/'intro.css', root/'intro.js', root/'styles.css', root/'responsive.css', root/'polish.css', root/'gallery.css', root/'app.js', root/'polish.js', root/'music.js', root/'event.json', root/'vercel.json']
+          sizes = {p.name: p.stat().st_size for p in payload}
+          total = sum(sizes.values())
+          initial = sizes['index.html'] + sizes['intro.css'] + sizes['intro.js']
+          assert sizes['index.html'] < 38_000, sizes
+          assert sizes['intro.css'] < 8_000, sizes
+          assert sizes['intro.js'] < 6_000, sizes
+          assert sizes['styles.css'] < 35_000, sizes
+          assert sizes['responsive.css'] < 2_000, sizes
+          assert sizes['polish.css'] < 16_000, sizes
+          assert sizes['gallery.css'] < 8_000, sizes
+          assert sizes['app.js'] < 20_000, sizes
+          assert sizes['polish.js'] < 7_000, sizes
+          assert sizes['music.js'] < 7_000, sizes
+          assert initial < 30_000, (sizes, initial)
+          assert total < 98_000, (sizes, total)
+          print('Initial critical bytes:', initial)
+          print('Full static bytes excluding lazy media:', sizes, 'total=', total)
+          print('Background soundtrack bytes:', music.stat().st_size)
+          print('Cha-Ching bytes:', chime.stat().st_size)
+          print('GARHY ad WebP bytes:', len(raw))
+          PY
+          ! grep -RIE 'service[_-]?role|sb_secret_|SUPABASE_SERVICE_ROLE' projects/mohamed-a-2026 --exclude='*.md'
+          ! grep -RIE 'fonts\.googleapis|fonts\.gstatic|<video|<iframe' projects/mohamed-a-2026/index.html
+          grep -Fq "Content-Security-Policy" projects/mohamed-a-2026/vercel.json
+          grep -Fq "media-src 'self'" projects/mohamed-a-2026/vercel.json
+          grep -Fq "connect-src 'self'" projects/mohamed-a-2026/vercel.json
+          grep -Fq "noindex, nofollow, noarchive" projects/mohamed-a-2026/vercel.json
+          grep -Fq "./gallery.css" projects/mohamed-a-2026/polish.js
+          grep -Fq "./music.js" projects/mohamed-a-2026/intro.js
+          grep -Fq "garhy:experience-entered" projects/mohamed-a-2026/intro.js
+          grep -Fq "garhy:experience-entered" projects/mohamed-a-2026/app.js
+
+      - name: Install browser QA dependencies
+        run: |
+          npm install --no-save playwright@1.55.0 @axe-core/playwright@4.10.2
+          npx playwright install --with-deps chromium
+
+      - name: Start isolated static server
+        run: |
+          python3 -m http.server 4173 --bind 127.0.0.1 > /tmp/mohamed-a-http.log 2>&1 &
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:4173/projects/mohamed-a-2026/index.html >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/mohamed-a-http.log
+          exit 1
+
+      - name: Diagnose browser resource URLs
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import { chromium } from 'playwright';
+          const browser=await chromium.launch({headless:true});
+          const context=await browser.newContext({viewport:{width:280,height:653},isMobile:true,hasTouch:true});
+          const page=await context.newPage();
+          page.on('console',msg=>{if(msg.type()==='error')console.log('CONSOLE_ERROR',JSON.stringify({text:msg.text(),location:msg.location()}))});
+          page.on('requestfailed',req=>console.log('REQUEST_FAILED',JSON.stringify({url:req.url(),failure:req.failure()})));
+          const cdp=await context.newCDPSession(page);
+          const requests=new Map();
+          await cdp.send('Network.enable');
+          await cdp.send('Log.enable');
+          cdp.on('Network.requestWillBeSent',e=>requests.set(e.requestId,e.request.url));
+          cdp.on('Network.loadingFailed',e=>console.log('NETWORK_LOADING_FAILED',JSON.stringify({url:requests.get(e.requestId)||'',errorText:e.errorText,type:e.type,blockedReason:e.blockedReason||''})));
+          cdp.on('Log.entryAdded',({entry})=>{if(entry.level==='error')console.log('CDP_LOG_ERROR',JSON.stringify({text:entry.text,url:entry.url||'',source:entry.source,lineNumber:entry.lineNumber}))});
+          await page.goto('http://127.0.0.1:4173/projects/mohamed-a-2026/index.html',{waitUntil:'networkidle'});
+          await page.locator('[data-enter]').click();
+          await page.waitForTimeout(1200);
+          await browser.close();
+          NODE
+
+      - name: Full multi-viewport browser and accessibility QA
+        run: node tests/e2e/mohamed-a-festival-smoke.mjs
+
+      - name: Intro card typography bounds QA
+        run: node tests/e2e/mohamed-a-intro-card-bounds.mjs
+
+      - name: Calendar and sharing functional QA
+        run: node tests/e2e/mohamed-a-functional.mjs
+
+      - name: Real viewport visual-frame QA
+        run: node tests/e2e/mohamed-a-visual-frames.mjs
+
+      - name: Lazy 2026 gallery UX QA
+        run: node tests/e2e/mohamed-a-gallery.mjs
+
+      - name: First-gesture music, Cha-Ching, vibration and ad marquee QA
+        run: node tests/e2e/mohamed-a-music.mjs
+
+      - name: Upload QA screenshots
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: mohamed-a-release-candidate-${{ github.sha }}
+          path: artifacts/mohamed-a-qa/*.png
+          if-no-files-found: warn
+          retention-days: 14
