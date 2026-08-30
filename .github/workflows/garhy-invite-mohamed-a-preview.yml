@@ -81,12 +81,20 @@ jobs:
           auth=(-H "Authorization: Bearer $VERCEL_TOKEN")
           endpoint="https://api.vercel.com/v9/projects/$PROJECT_NAME?teamId=$VERCEL_ORG_ID"
           status="$(curl -sS -o /tmp/vercel-project.json -w '%{http_code}' "${auth[@]}" "$endpoint")"
-          [ "$status" = '200' ] || { echo "Failed to inspect isolated Vercel project (HTTP $status)." >&2; cat /tmp/vercel-project.json >&2; exit 1; }
+          if [ "$status" = '404' ]; then
+            jq -n --arg name "$PROJECT_NAME" '{name:$name,enablePreviewFeedback:false,enableProductionFeedback:false,framework:null}' > /tmp/vercel-project-create.json
+            create_status="$(curl -sS -o /tmp/vercel-project.json -w '%{http_code}' -X POST "${auth[@]}" -H 'Content-Type: application/json' "https://api.vercel.com/v11/projects?teamId=$VERCEL_ORG_ID" --data-binary @/tmp/vercel-project-create.json)"
+            [ "$create_status" = '200' ] || [ "$create_status" = '201' ] || { echo "Failed to recreate isolated Vercel project (HTTP $create_status)." >&2; cat /tmp/vercel-project.json >&2; exit 1; }
+          elif [ "$status" != '200' ]; then
+            echo "Failed to inspect isolated Vercel project (HTTP $status)." >&2
+            cat /tmp/vercel-project.json >&2
+            exit 1
+          fi
           project_id="$(jq -r '.id // empty' /tmp/vercel-project.json)"
           test -n "$project_id"
           echo "VERCEL_PROJECT_ID=$project_id" >> "$GITHUB_ENV"
           patch_status="$(curl -sS -o /tmp/vercel-project-patch.json -w '%{http_code}' -X PATCH "${auth[@]}" -H 'Content-Type: application/json' "https://api.vercel.com/v9/projects/$project_id?teamId=$VERCEL_ORG_ID" --data '{"enablePreviewFeedback":false,"enableProductionFeedback":false}')"
-          [ "$patch_status" = '200' ]
+          [ "$patch_status" = '200' ] || { cat /tmp/vercel-project-patch.json >&2; exit 1; }
 
       - name: Assemble release outside Git root
         if: steps.preflight.outputs.ready == 'true'
