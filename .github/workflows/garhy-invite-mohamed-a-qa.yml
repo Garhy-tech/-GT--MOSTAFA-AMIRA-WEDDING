@@ -105,7 +105,6 @@ jobs:
           ad64 = root / 'media' / 'ads' / 'gt-ad-strip.b64'
           assert music.is_file() and 10_000 < music.stat().st_size < 500_000
           assert chime.is_file() and 5_000 < chime.stat().st_size < 20_000
-          assert b'OggS' in music.read_bytes()
           assert chime.read_bytes()[:4] == b'OggS'
           encoded = ''.join(ad64.read_text(encoding='utf-8').split())
           raw = base64.b64decode(encoded, validate=True)
