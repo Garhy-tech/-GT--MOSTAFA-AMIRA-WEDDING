@@ -217,11 +217,13 @@ try {
     assert.equal(await page.locator('[data-finale-zone]').evaluate(el => el.classList.contains('is-live')), true, `${viewport.name}: finale choreography must trigger`);
 
     if (viewport.name === 'mobile-390') {
-      const sound = page.locator('[data-beat-toggle]');
+      const sound = page.locator('[data-music-toggle]');
+      await sound.waitFor({ state: 'visible' });
+      assert.equal(await sound.getAttribute('aria-pressed'), 'true', 'mobile-390: first gesture must leave the real soundtrack playing');
       await sound.click();
-      assert.equal(await sound.getAttribute('aria-pressed'), 'true', 'mobile-390: beat must turn on only after user action');
+      assert.equal(await sound.getAttribute('aria-pressed'), 'false', 'mobile-390: music control must pause cleanly');
       await sound.click();
-      assert.equal(await sound.getAttribute('aria-pressed'), 'false', 'mobile-390: beat must turn off cleanly');
+      assert.equal(await sound.getAttribute('aria-pressed'), 'true', 'mobile-390: music control must resume cleanly');
     }
 
     const reveals = page.locator('.reveal');
