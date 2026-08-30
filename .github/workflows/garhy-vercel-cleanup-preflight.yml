@@ -54,7 +54,7 @@ jobs:
             for (const [id, expectedName] of candidates) {
               const project = await api('/v9/projects/' + encodeURIComponent(id) + '?teamId=' + encodeURIComponent(teamId));
               const envResponse = await api('/v9/projects/' + encodeURIComponent(id) + '/env?teamId=' + encodeURIComponent(teamId));
-              const deploymentResponse = await api('/v13/deployments?projectId=' + encodeURIComponent(id) + '&teamId=' + encodeURIComponent(teamId) + '&limit=100');
+              const deploymentResponse = await api('/v6/deployments?projectId=' + encodeURIComponent(id) + '&teamId=' + encodeURIComponent(teamId) + '&limit=100');
 
               const domainNames = (project.domains || [])
                 .map((domain) => typeof domain === 'string' ? domain : domain.name)
