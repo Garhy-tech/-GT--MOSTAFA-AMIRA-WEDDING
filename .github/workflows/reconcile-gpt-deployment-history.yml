@@ -1,0 +1,107 @@
+name: Reconcile GPT deployment history safely
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  reconcile:
+    if: github.event.pull_request.head.ref == 'ops/reconcile-gpt-deployment-history-20260830'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Preserve current production rollback and current previews
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          node <<'NODE'
+          const teamId = 'team_mZ52AwdCUXSmkLKH3YMqqf5U';
+          const projectId = 'prj_HU1CuB2UAPwbLqO9FhzQoGKHVRjm';
+          const token = process.env.VERCEL_TOKEN;
+          if (!token) throw new Error('Missing Vercel credential');
+          const idOf = d => d?.uid || d?.id || null;
+          async function request(method, path) {
+            const response = await fetch('https://api.vercel.com' + path, {
+              method, headers: { Authorization: 'Bearer ' + token }
+            });
+            const text = await response.text();
+            let data = {}; try { data = text ? JSON.parse(text) : {}; } catch {}
+            return { response, data };
+          }
+          async function aliasTarget(alias) {
+            const encoded = encodeURIComponent(alias);
+            for (const version of ['v4', 'v2']) {
+              const result = await request('GET', '/' + version + '/aliases/' + encoded + '?teamId=' + teamId);
+              if (result.response.status === 404) continue;
+              if (!result.response.ok) throw new Error('Unable to verify alias');
+              const id = result.data.deploymentId || result.data.deployment?.id || result.data.deployment?.uid || null;
+              if (!id) throw new Error('Alias owner unavailable');
+              return id;
+            }
+            throw new Error('Alias not found');
+          }
+          const project = await request('GET', '/v9/projects/' + projectId + '?teamId=' + teamId);
+          if (!project.response.ok || project.data.name !== 'garhy-gpt-oss-cloud') throw new Error('Unexpected project');
+          if (!(project.data.domains || []).every(d => typeof d === 'string' && d.endsWith('.vercel.app'))) throw new Error('External domain detected');
+          const all = [], seen = new Set();
+          let until = null;
+          for (let page=0; page<20; page++) {
+            const suffix = until ? '&until=' + encodeURIComponent(until) : '';
+            const listed = await request('GET', '/v6/deployments?projectId=' + projectId + '&teamId=' + teamId + '&limit=100' + suffix);
+            if (!listed.response.ok) throw new Error('Unable to list deployments');
+            const rows=listed.data.deployments||[];
+            for (const row of rows) { const id=idOf(row); if (id && !seen.has(id)) {seen.add(id);all.push(row);} }
+            const next=listed.data.pagination?.next;
+            if (!next || next===until || rows.length===0) break;
+            until=next;
+          }
+          const production=all.filter(d=>d.target==='production'&&d.state==='READY').sort((a,b)=>b.created-a.created);
+          const retainedProduction=production.slice(0,2);
+          const candidates=[];
+          for (const old of production.slice(2)) candidates.push({type:'production', old, retained:idOf(production[0])});
+          const previewGroups=new Map();
+          for (const d of all.filter(d=>d.target==null&&d.state==='READY'&&d.meta?.githubCommitRef&&d.meta?.branchAlias)) {
+            const rows=previewGroups.get(d.meta.githubCommitRef)||[]; rows.push(d); previewGroups.set(d.meta.githubCommitRef,rows);
+          }
+          for (const rows of previewGroups.values()) {
+            rows.sort((a,b)=>b.created-a.created);
+            for (const old of rows.slice(1)) candidates.push({type:'preview',old,retained:idOf(rows[0])});
+          }
+          const holds=[];
+          for (const candidate of candidates) {
+            const oldId=idOf(candidate.old);
+            const fetched=await request('GET','/v13/deployments/'+oldId+'?teamId='+teamId);
+            const detail=fetched.data.deployment||fetched.data;
+            const detailId=idOf(detail);
+            const aliases=detail.alias||[];
+            const expectedTarget=candidate.type==='production'?'production':null;
+            const projectMatch=(detail.projectId||detail.project?.id||null)===projectId;
+            const aliasShape=aliases.every(a=>typeof a==='string'&&a.endsWith('.vercel.app'));
+            const branchMatch=candidate.type==='production'||detail.meta?.githubCommitRef===candidate.old.meta?.githubCommitRef;
+            const safe=fetched.response.ok&&detailId===oldId&&projectMatch&&detail.target===expectedTarget&&detail.readyState==='READY'&&aliasShape&&branchMatch;
+            if(!safe){holds.push({type:candidate.type,reason:'metadata or alias shape differs'});continue;}
+            const targets=[];for(const alias of aliases)targets.push(await aliasTarget(alias));
+            if(!targets.every(id=>id===candidate.retained)){holds.push({type:candidate.type,reason:'alias not on retained deployment'});}
+          }
+          if(holds.length){console.log(JSON.stringify({outcome:'hold',holdCount:holds.length}));throw new Error('No deletions made');}
+          let deletedProduction=0,deletedPreview=0;
+          for(const candidate of candidates){
+            const id=idOf(candidate.old);
+            const deleted=await request('DELETE','/v13/deployments/'+id+'?teamId='+teamId);
+            if(!deleted.response.ok)throw new Error('Delete failed');
+            const post=await request('GET','/v13/deployments/'+id+'?teamId='+teamId);
+            if(post.response.status!==404)throw new Error('Post-delete verification failed');
+            if(candidate.type==='production')deletedProduction++;else deletedPreview++;
+          }
+          console.log(JSON.stringify({outcome:'deleted',deletedProduction,deletedPreview,retainedProduction:retainedProduction.length,retainedPreviewBranches:previewGroups.size}));
+          NODE
+      - name: Remove temporary source branch
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          curl --fail --silent --show-error             -X DELETE             -H "Authorization: Bearer $GITHUB_TOKEN"             -H "Accept: application/vnd.github+json"             "https://api.github.com/repos/Garhy-tech/-GT--MOSTAFA-AMIRA-WEDDING/git/refs/heads/ops/reconcile-gpt-deployment-history-20260830"
