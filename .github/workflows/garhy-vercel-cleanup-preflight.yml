@@ -54,20 +54,37 @@ jobs:
             for (const [id, expectedName] of candidates) {
               const project = await api('/v9/projects/' + encodeURIComponent(id) + '?teamId=' + encodeURIComponent(teamId));
               const envResponse = await api('/v9/projects/' + encodeURIComponent(id) + '/env?teamId=' + encodeURIComponent(teamId));
+              const deploymentResponse = await api('/v13/deployments?projectId=' + encodeURIComponent(id) + '&teamId=' + encodeURIComponent(teamId) + '&limit=100');
+
               const domainNames = (project.domains || [])
                 .map((domain) => typeof domain === 'string' ? domain : domain.name)
                 .filter(Boolean);
+              const deployments = deploymentResponse.deployments || [];
+              const aliasNames = deployments.flatMap((deployment) => deployment.alias || deployment.aliases || [])
+                .map((alias) => typeof alias === 'string' ? alias : alias.domain)
+                .filter(Boolean);
               const customDomainCount = domainNames.filter((name) => !name.endsWith('.vercel.app')).length;
+              const customAliasCount = aliasNames.filter((name) => !name.endsWith('.vercel.app')).length;
               const envCount = (envResponse.envs || []).length;
-              const eligible = project.name === expectedName && customDomainCount === 0 && envCount === 0;
+              const hasGitLink = Boolean(project.link && (project.link.repo || project.link.repoId || project.link.org));
+              const isExplicitTestProject = /^yahia-(base64-encoding|sandboxref|atpath|datauri|amira-deploy)-test$/.test(expectedName);
+              const eligible = project.name === expectedName
+                && customDomainCount === 0
+                && customAliasCount === 0
+                && envCount === 0
+                && !hasGitLink
+                && (isExplicitTestProject || deployments.length === 0);
+
               result.push({
                 id,
                 expectedName,
                 actualName: project.name,
-                latestState: project.latestDeployment ? project.latestDeployment.readyState : 'NONE',
-                latestTarget: project.latestDeployment ? project.latestDeployment.target || 'preview' : 'NONE',
+                deploymentCount: deployments.length,
+                productionDeploymentCount: deployments.filter((deployment) => deployment.target === 'production').length,
                 customDomainCount,
+                customAliasCount,
                 envCount,
+                hasGitLink,
                 classification: eligible ? 'DELETE_ELIGIBLE' : 'HOLD',
               });
             }
