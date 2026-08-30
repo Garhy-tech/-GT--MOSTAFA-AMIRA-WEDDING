@@ -28,6 +28,7 @@ try {
   await page.goto(base, { waitUntil: 'networkidle' });
   assert.equal(musicRequests.length, 0, 'background music must remain network-idle before the first gesture');
   assert.equal(chimeRequests.length, 0, 'Cha-Ching must remain network-idle before the first gesture');
+  assert.equal(await page.evaluate(() => window.__garhyAudio?.music === null), true, 'music element must be lazily created only after a gesture');
 
   const musicResponse = page.waitForResponse(response =>
     response.url().includes('/media/jamaican-bam-bam.ogg') && [200, 206].includes(response.status()),
@@ -43,11 +44,45 @@ try {
   await page.locator('#hero-title').waitFor({ state: 'visible' });
   assert.ok(musicRequests.length >= 1, 'Jamaican soundtrack must start loading on the first user gesture');
   assert.ok(chimeRequests.length >= 1, 'Cha-Ching must fire on the entry button');
-  await page.waitForFunction(() => window.__garhyAudio?.started === true);
+  const configured = await page.evaluate(() => {
+    const music = window.__garhyAudio?.music;
+    return music ? {
+      isMedia: music instanceof HTMLMediaElement,
+      src: music.getAttribute('src'),
+      loop: music.loop,
+      volume: music.volume,
+      preload: music.preload
+    } : null;
+  });
+  assert.equal(configured?.isMedia, true, 'first gesture must create a real HTML media element');
+  assert.equal(configured?.src, './media/jamaican-bam-bam.ogg', 'music element must point at the local soundtrack');
+  assert.equal(configured?.loop, true, 'background soundtrack must loop');
+  assert.equal(configured?.preload, 'none', 'soundtrack must preserve lazy preload policy');
+  assert.ok(Math.abs((configured?.volume ?? 0) - 0.56) < 0.001, 'soundtrack volume must retain the intended mix');
   assert.ok(await page.evaluate(() => (window.__vibrationCalls || []).length >= 1), 'entry button must request vibration feedback');
 
   const music = page.locator('[data-music-toggle]');
   await music.waitFor({ state: 'visible' });
+
+  // GitHub headless runners have no guaranteed audio sink. The real network/media
+  // contract is verified above; patch only play/pause state transitions here so the
+  // UI control semantics remain deterministic without pretending to test speakers.
+  await page.evaluate(() => {
+    const audio = window.__garhyAudio.music;
+    window.__qaMediaPaused = false;
+    Object.defineProperty(audio, 'paused', { configurable: true, get: () => window.__qaMediaPaused });
+    audio.play = async () => {
+      window.__qaMediaPaused = false;
+      window.__garhyAudio.started = true;
+      audio.dispatchEvent(new Event('play'));
+    };
+    audio.pause = () => {
+      window.__qaMediaPaused = true;
+      window.__garhyAudio.started = false;
+      audio.dispatchEvent(new Event('pause'));
+    };
+    audio.dispatchEvent(new Event('play'));
+  });
   await page.waitForFunction(() => document.querySelector('[data-music-toggle]')?.getAttribute('aria-pressed') === 'true');
 
   const before = await page.evaluate(() => ({ fx: window.__garhyAudio.fxCount, vibrations: window.__vibrationCalls.length }));
@@ -73,4 +108,4 @@ try {
   await browser.close();
 }
 
-console.log('MOHAMED × A first-gesture music, Cha-Ching, vibration and ad marquee QA passed');
+console.log('MOHAMED × A first-gesture media network, controls, Cha-Ching, vibration and ad marquee QA passed');
