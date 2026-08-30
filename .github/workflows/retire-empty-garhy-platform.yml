@@ -1,0 +1,107 @@
+name: Retire verified empty duplicate Vercel project
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  retire:
+    if: github.event.pull_request.head.ref == 'ops/retire-empty-garhy-platform-20260830'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+    steps:
+      - name: Re-verify and delete only empty duplicate project
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const token = process.env.VERCEL_TOKEN;
+            if (!token) {
+              core.setFailed('VERCEL_TOKEN is unavailable.');
+              return;
+            }
+
+            const teamId = 'team_mZ52AwdCUXSmkLKH3YMqqf5U';
+            const duplicateId = 'prj_EIFe4C3RFG3vFKd98FjhBCmTkqAk';
+            const canonicalId = 'prj_F4A5JOuIRx8b4wpezcnrayTE03jB';
+            const temporaryBranch = 'ops/retire-empty-garhy-platform-20260830';
+
+            async function api(path, init = {}) {
+              return fetch('https://api.vercel.com' + path, {
+                ...init,
+                headers: { Authorization: 'Bearer ' + token, ...(init.headers || {}) },
+              });
+            }
+            async function project(id) {
+              const response = await api('/v9/projects/' + encodeURIComponent(id) + '?teamId=' + encodeURIComponent(teamId));
+              if (!response.ok) throw new Error('Unable to inspect project ' + id + ': ' + response.status);
+              return response.json();
+            }
+            async function deployments(id) {
+              const response = await api('/v6/deployments?projectId=' + encodeURIComponent(id) + '&teamId=' + encodeURIComponent(teamId) + '&limit=100');
+              if (!response.ok) throw new Error('Unable to list deployments for ' + id + ': ' + response.status);
+              return response.json();
+            }
+
+            const [duplicate, canonical, duplicateEnv, duplicateDeployments, canonicalDeployments] = await Promise.all([
+              project(duplicateId),
+              project(canonicalId),
+              api('/v9/projects/' + encodeURIComponent(duplicateId) + '/env?teamId=' + encodeURIComponent(teamId)).then(async (response) => {
+                if (!response.ok) throw new Error('Unable to inspect duplicate environments: ' + response.status);
+                return response.json();
+              }),
+              deployments(duplicateId),
+              deployments(canonicalId),
+            ]);
+
+            const duplicateDomains = (duplicate.domains || [])
+              .map((domain) => typeof domain === 'string' ? domain : domain.name)
+              .filter(Boolean);
+            const canonicalReady = (canonicalDeployments.deployments || []).some((deployment) => deployment.state === 'READY');
+            const sameRepository = Boolean(
+              duplicate.link && canonical.link
+              && duplicate.link.repo && canonical.link.repo
+              && duplicate.link.org && canonical.link.org
+              && duplicate.link.repo === canonical.link.repo
+              && duplicate.link.org === canonical.link.org
+            );
+
+            const safe = duplicate.id === duplicateId
+              && duplicate.name === 'garhy-platform'
+              && duplicateDomains.every((name) => name.endsWith('.vercel.app'))
+              && (duplicateEnv.envs || []).length === 0
+              && (duplicateDeployments.deployments || []).length === 0
+              && canonical.id === canonicalId
+              && canonical.name === 'gt-marketplace'
+              && canonicalReady
+              && sameRepository;
+
+            if (!safe) {
+              throw new Error('Safety gate failed; duplicate project was not deleted.');
+            }
+
+            const deletionResponse = await api(
+              '/v9/projects/' + encodeURIComponent(duplicateId) + '?teamId=' + encodeURIComponent(teamId),
+              { method: 'DELETE' },
+            );
+            if (![200, 202, 204].includes(deletionResponse.status)) {
+              throw new Error('Project deletion failed with ' + deletionResponse.status);
+            }
+
+            const verificationResponse = await api('/v9/projects/' + encodeURIComponent(duplicateId) + '?teamId=' + encodeURIComponent(teamId));
+            if (![404, 410].includes(verificationResponse.status)) {
+              throw new Error('Post-delete verification failed with ' + verificationResponse.status);
+            }
+
+            const { owner, repo } = context.repo;
+            await github.rest.git.deleteRef({ owner, repo, ref: 'heads/' + temporaryBranch });
+            await core.summary
+              .addHeading('GARHY duplicate project retired')
+              .addRaw('\nDeleted empty duplicate project: garhy-platform\n')
+              .addRaw('Kept canonical gt-marketplace and all production resources.\n')
+              .write();
