@@ -1,0 +1,81 @@
+name: Retire duplicate completed workflow branch
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  retire:
+    if: github.event.pull_request.head.ref == 'ops/retire-duplicate-workflow-branch-20260830'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+    steps:
+      - name: Verify and delete only duplicate completed branch
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const targetBranch = 'chore/remove-retired-vercel-preview-workflow-20260830';
+            const temporaryBranch = 'ops/retire-duplicate-workflow-branch-20260830';
+            const workflowPath = '.github/workflows/garhy-invite-vercel-preview.yml';
+            const { owner, repo } = context.repo;
+
+            if (!process.env.VERCEL_TOKEN) {
+              core.setFailed('VERCEL_TOKEN is unavailable to check deployment references.');
+              return;
+            }
+
+            const openPullRequests = await github.paginate(github.rest.pulls.list, {
+              owner,
+              repo,
+              state: 'open',
+              head: owner + ':' + targetBranch,
+              per_page: 100,
+            });
+            if (openPullRequests.length !== 0) {
+              throw new Error('Safety gate failed: target branch has an open pull request.');
+            }
+
+            async function pathIsAbsent(ref) {
+              try {
+                await github.rest.repos.getContent({ owner, repo, path: workflowPath, ref });
+                return false;
+              } catch (error) {
+                if (error.status === 404) return true;
+                throw error;
+              }
+            }
+
+            if (!(await pathIsAbsent('main')) || !(await pathIsAbsent(targetBranch))) {
+              throw new Error('Safety gate failed: workflow contents differ from the completed main state.');
+            }
+
+            const vercelResponse = await fetch(
+              'https://api.vercel.com/v6/deployments?projectId=prj_7r5uJUxlMQ6odx99vehYHYBIXJC3&teamId=team_mZ52AwdCUXSmkLKH3YMqqf5U&branch=' + encodeURIComponent(targetBranch),
+              { headers: { Authorization: 'Bearer ' + process.env.VERCEL_TOKEN } },
+            );
+            if (!vercelResponse.ok) throw new Error('Vercel reference check failed with ' + vercelResponse.status);
+            const vercelData = await vercelResponse.json();
+            if ((vercelData.deployments || []).length !== 0) {
+              throw new Error('Safety gate failed: Vercel deployments reference the target branch.');
+            }
+
+            await github.rest.git.deleteRef({ owner, repo, ref: 'heads/' + targetBranch });
+            try {
+              await github.rest.repos.getBranch({ owner, repo, branch: targetBranch });
+              throw new Error('Post-delete verification failed: target branch still exists.');
+            } catch (error) {
+              if (error.status !== 404) throw error;
+            }
+
+            await github.rest.git.deleteRef({ owner, repo, ref: 'heads/' + temporaryBranch });
+            await core.summary
+              .addHeading('GARHY duplicate workflow branch retired')
+              .addRaw('\nDeleted target branch and temporary cleanup branch after verification.\n')
+              .write();
