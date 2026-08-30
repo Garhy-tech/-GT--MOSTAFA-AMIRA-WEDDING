@@ -1,0 +1,78 @@
+name: Audit GT Marketplace preview alias semantics
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  audit:
+    if: github.event.pull_request.head.ref == 'ops/audit-marketplace-preview-aliases-20260830'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Read alias ownership without mutation
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          node <<'NODE'
+          const teamId = 'team_mZ52AwdCUXSmkLKH3YMqqf5U';
+          const projectId = 'prj_F4A5JOuIRx8b4wpezcnrayTE03jB';
+          const token = process.env.VERCEL_TOKEN;
+          if (!token) throw new Error('Missing Vercel credential');
+          async function request(path) {
+            const r = await fetch('https://api.vercel.com' + path, { headers: { Authorization: 'Bearer ' + token } });
+            const t = await r.text();
+            let data = {}; try { data = t ? JSON.parse(t) : {}; } catch {}
+            return { status: r.status, data };
+          }
+          const listed = await request('/v6/deployments?projectId=' + projectId + '&teamId=' + teamId + '&limit=100');
+          if (listed.status !== 200) throw new Error('Unable to list deployments');
+          const ref = 'tmp/brand-and-commerce-hardening-20260830';
+          const rows = (listed.data.deployments || [])
+            .filter(d => d.target == null && d.state === 'READY' && d.meta?.githubCommitRef === ref)
+            .sort((a,b) => b.created - a.created);
+          if (rows.length < 2) throw new Error('Representative branch lacks superseded previews');
+          const newest = rows[0];
+          const old = rows[1];
+          const detailResult = await request('/v13/deployments/' + old.id + '?teamId=' + teamId);
+          const detail = detailResult.data.deployment || detailResult.data;
+          const alias = (detail.alias || [])[0] || old.meta?.branchAlias || null;
+          const check = {};
+          for (const version of ['v4', 'v2']) {
+            const aliasResult = alias ? await request('/' + version + '/aliases/' + encodeURIComponent(alias) + '?teamId=' + teamId) : { status: null, data: {} };
+            check[version] = {
+              status: aliasResult.status,
+              deploymentId: aliasResult.data.deploymentId || aliasResult.data.deployment?.id || aliasResult.data.deployment?.uid || null,
+              keys: Object.keys(aliasResult.data || {}).sort()
+            };
+          }
+          console.log(JSON.stringify({
+            old: {
+              id: old.id,
+              branchAlias: old.meta?.branchAlias || null,
+              target: old.target,
+              state: old.state
+            },
+            newest: { id: newest.id },
+            directDetail: {
+              status: detailResult.status,
+              projectId: detail.projectId || null,
+              nestedProjectId: detail.project?.id || null,
+              target: detail.target ?? null,
+              state: detail.state || null,
+              readyState: detail.readyState || null,
+              aliases: detail.alias || [],
+              keys: Object.keys(detail || {}).sort()
+            },
+            aliasResolution: check
+          }));
+          NODE
+      - name: Remove temporary source branch
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          curl --fail --silent --show-error             -X DELETE             -H "Authorization: Bearer $GITHUB_TOKEN"             -H "Accept: application/vnd.github+json"             "https://api.github.com/repos/Garhy-tech/-GT--MOSTAFA-AMIRA-WEDDING/git/refs/heads/ops/audit-marketplace-preview-aliases-20260830"
