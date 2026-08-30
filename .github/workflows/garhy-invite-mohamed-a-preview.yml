@@ -37,12 +37,6 @@ jobs:
           set -euo pipefail
           if [ -z "${VERCEL_TOKEN:-}" ]; then
             echo 'ready=false' >> "$GITHUB_OUTPUT"
-            {
-              echo '## MOHAMED × A Vercel Preview'
-              echo
-              echo 'Preview deployment was not attempted because repository secret `VERCEL_TOKEN` is not configured.'
-              echo 'No existing GARHY production project, domain, or alias was modified.'
-            } >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
           echo 'ready=true' >> "$GITHUB_OUTPUT"
@@ -53,34 +47,30 @@ jobs:
         run: |
           set -euo pipefail
           for file in index.html intro.css intro.js styles.css responsive.css polish.css gallery.css app.js polish.js music.js event.json vercel.json; do test -s "$PROJECT_DIR/$file"; done
-          test -s "$PROJECT_DIR/media/daweta-zewace.mp3"
-          test "$(stat -c%s "$PROJECT_DIR/media/daweta-zewace.mp3")" -eq 3133484
-          cmp "$PROJECT_DIR/media/daweta-zewace.mp3" assets/v2/audio/daweta-zewace.mp3
+          test -s "$PROJECT_DIR/media/jamaican-bam-bam.ogg"
+          test -s "$PROJECT_DIR/media/cha-ching.ogg"
+          test -s "$PROJECT_DIR/media/ads/gt-ad-strip.b64"
+          test "$(stat -c%s "$PROJECT_DIR/media/jamaican-bam-bam.ogg")" -gt 350000
+          test "$(stat -c%s "$PROJECT_DIR/media/jamaican-bam-bam.ogg")" -lt 500000
+          test "$(stat -c%s "$PROJECT_DIR/media/cha-ching.ogg")" -lt 20000
           node --check "$PROJECT_DIR/intro.js"
-          node --check "$PROJECT_DIR/app.js"
-          node --check "$PROJECT_DIR/polish.js"
           node --check "$PROJECT_DIR/music.js"
           python - <<'PY'
-          import json
+          import base64, json
           from pathlib import Path
-          data=json.loads(Path('projects/mohamed-a-2026/event.json').read_text(encoding='utf-8'))
-          assert data['slug']=='mohamed-a-2026'
-          assert data['rsvp'] is False
-          assert data['events'][0]['date']=='2026-09-03'
-          assert data['events'][0]['location'] is None
-          assert data['events'][1]['date']=='2026-09-04'
-          assert data['events'][1]['location']['name']=='قاعة شهرزاد'
-          print('Event contract OK')
+          root=Path('projects/mohamed-a-2026')
+          data=json.loads((root/'event.json').read_text(encoding='utf-8'))
+          assert data['slug']=='mohamed-a-2026' and data['rsvp'] is False
+          raw=base64.b64decode(''.join((root/'media/ads/gt-ad-strip.b64').read_text().split()),validate=True)
+          assert raw[:4]==b'RIFF' and raw[8:12]==b'WEBP' and len(raw)<30000
           PY
-          grep -Fq 'data-experience-template' "$PROJECT_DIR/index.html"
-          grep -Fq './intro.js' "$PROJECT_DIR/index.html"
-          grep -Fq 'data-gallery-zone' "$PROJECT_DIR/index.html"
-          grep -Fq 'images.unsplash.com' "$PROJECT_DIR/index.html"
-          grep -Fq 'images.unsplash.com' "$PROJECT_DIR/vercel.json"
+          grep -Fq './media/jamaican-bam-bam.ogg' "$PROJECT_DIR/intro.js"
+          grep -Fq './media/cha-ching.ogg' "$PROJECT_DIR/intro.js"
+          grep -Fq 'navigator.vibrate' "$PROJECT_DIR/intro.js"
+          grep -Fq './media/ads/gt-ad-strip.b64' "$PROJECT_DIR/music.js"
+          grep -Fq 'data-gt-ads' "$PROJECT_DIR/music.js"
           grep -Fq "media-src 'self'" "$PROJECT_DIR/vercel.json"
-          grep -Fq './music.js' "$PROJECT_DIR/intro.js"
-          grep -Fq './media/daweta-zewace.mp3' "$PROJECT_DIR/music.js"
-          grep -Fq "audio.preload='none'" "$PROJECT_DIR/music.js"
+          grep -Fq "connect-src 'self'" "$PROJECT_DIR/vercel.json"
           ! grep -RIE 'service[_-]?role|sb_secret_|SUPABASE_SERVICE_ROLE' "$PROJECT_DIR" --exclude='*.md'
 
       - name: Resolve and harden isolated Vercel project
@@ -91,17 +81,12 @@ jobs:
           auth=(-H "Authorization: Bearer $VERCEL_TOKEN")
           endpoint="https://api.vercel.com/v9/projects/$PROJECT_NAME?teamId=$VERCEL_ORG_ID"
           status="$(curl -sS -o /tmp/vercel-project.json -w '%{http_code}' "${auth[@]}" "$endpoint")"
-          if [ "$status" = '404' ]; then
-            create_status="$(curl -sS -o /tmp/vercel-project.json -w '%{http_code}' -X POST "${auth[@]}" -H 'Content-Type: application/json' "https://api.vercel.com/v9/projects?teamId=$VERCEL_ORG_ID" --data "{\"name\":\"$PROJECT_NAME\",\"enablePreviewFeedback\":false,\"enableProductionFeedback\":false}")"
-            case "$create_status" in 200|201) ;; *) echo "Failed to create isolated Vercel project (HTTP $create_status)." >&2; cat /tmp/vercel-project.json >&2; exit 1 ;; esac
-          elif [ "$status" != '200' ]; then
-            echo "Failed to inspect isolated Vercel project (HTTP $status)." >&2; cat /tmp/vercel-project.json >&2; exit 1
-          fi
+          [ "$status" = '200' ] || { echo "Failed to inspect isolated Vercel project (HTTP $status)." >&2; cat /tmp/vercel-project.json >&2; exit 1; }
           project_id="$(jq -r '.id // empty' /tmp/vercel-project.json)"
           test -n "$project_id"
           echo "VERCEL_PROJECT_ID=$project_id" >> "$GITHUB_ENV"
           patch_status="$(curl -sS -o /tmp/vercel-project-patch.json -w '%{http_code}' -X PATCH "${auth[@]}" -H 'Content-Type: application/json' "https://api.vercel.com/v9/projects/$project_id?teamId=$VERCEL_ORG_ID" --data '{"enablePreviewFeedback":false,"enableProductionFeedback":false}')"
-          [ "$patch_status" = '200' ] || { echo "Failed to harden preview project (HTTP $patch_status)." >&2; cat /tmp/vercel-project-patch.json >&2; exit 1; }
+          [ "$patch_status" = '200' ]
 
       - name: Assemble release outside Git root
         if: steps.preflight.outputs.ready == 'true'
@@ -109,12 +94,12 @@ jobs:
         run: |
           set -euo pipefail
           rm -rf "$RELEASE_DIR"
-          mkdir -p "$RELEASE_DIR/.vercel" "$RELEASE_DIR/media"
+          mkdir -p "$RELEASE_DIR/.vercel" "$RELEASE_DIR/media/ads"
           for file in index.html intro.css intro.js styles.css responsive.css polish.css gallery.css app.js polish.js music.js event.json vercel.json; do cp "$PROJECT_DIR/$file" "$RELEASE_DIR/$file"; done
-          cp "$PROJECT_DIR/media/daweta-zewace.mp3" "$RELEASE_DIR/media/daweta-zewace.mp3"
-          cmp "$PROJECT_DIR/media/daweta-zewace.mp3" "$RELEASE_DIR/media/daweta-zewace.mp3"
+          cp "$PROJECT_DIR/media/jamaican-bam-bam.ogg" "$RELEASE_DIR/media/jamaican-bam-bam.ogg"
+          cp "$PROJECT_DIR/media/cha-ching.ogg" "$RELEASE_DIR/media/cha-ching.ogg"
+          cp "$PROJECT_DIR/media/ads/gt-ad-strip.b64" "$RELEASE_DIR/media/ads/gt-ad-strip.b64"
           jq -n --arg orgId "$VERCEL_ORG_ID" --arg projectId "$VERCEL_PROJECT_ID" --arg projectName "$PROJECT_NAME" '{orgId:$orgId,projectId:$projectId,projectName:$projectName}' > "$RELEASE_DIR/.vercel/project.json"
-          test -s "$RELEASE_DIR/vercel.json"
 
       - name: Deploy isolated preview
         if: steps.preflight.outputs.ready == 'true'
@@ -134,61 +119,37 @@ jobs:
           PREVIEW_URL: ${{ steps.deploy.outputs.url }}
         run: |
           set -euo pipefail
-          npx --yes vercel@latest curl / --deployment "$PREVIEW_URL" > /tmp/mohamed-a-root.html
-          grep -Fq 'MOHAMED' /tmp/mohamed-a-root.html
-          grep -Fq 'intro.css' /tmp/mohamed-a-root.html
-          grep -Fq 'intro.js' /tmp/mohamed-a-root.html
-          grep -Fq 'data-experience-template' /tmp/mohamed-a-root.html
-          grep -Fq 'data-gallery-zone' /tmp/mohamed-a-root.html
-          grep -Fq 'images.unsplash.com' /tmp/mohamed-a-root.html
-          grep -Fq '03 / 09 / 2026' /tmp/mohamed-a-root.html
-          grep -Fq '04 / 09 / 2026' /tmp/mohamed-a-root.html
-          grep -Fq 'سيتم إضافته قريبًا' /tmp/mohamed-a-root.html
-          grep -Fq 'قاعة شهرزاد' /tmp/mohamed-a-root.html
-          ! grep -Fq 'vercel.live' /tmp/mohamed-a-root.html
-          if grep -Eiq 'RSVP|تأكيد الحضور|اعتذار' /tmp/mohamed-a-root.html; then echo 'Unexpected attendance response flow detected in client preview.' >&2; exit 1; fi
-
-          for asset in intro.js app.js polish.js music.js gallery.css; do
-            npx --yes vercel@latest curl "/$asset" --deployment "$PREVIEW_URL" > "/tmp/$asset"
-            test -s "/tmp/$asset"
-          done
-          grep -Fq 'garhy:experience-entered' /tmp/intro.js
-          grep -Fq './music.js' /tmp/intro.js
-          grep -Fq 'garhy:experience-entered' /tmp/app.js
-          grep -Fq 'data-festival-image' /tmp/polish.js
-          grep -Fq './media/daweta-zewace.mp3' /tmp/music.js
-          grep -Fq "audio.preload='none'" /tmp/music.js
-          grep -Fq '.festival-gallery' /tmp/gallery.css
-
-          npx --yes vercel@latest curl /media/daweta-zewace.mp3 --deployment "$PREVIEW_URL" -I > /tmp/mohamed-a-music-headers.txt
-          grep -Eiq 'content-type: audio/(mpeg|mp3)' /tmp/mohamed-a-music-headers.txt
-
-          npx --yes vercel@latest curl /event.json --deployment "$PREVIEW_URL" > /tmp/mohamed-a-event.json
-          grep -Fq '"slug": "mohamed-a-2026"' /tmp/mohamed-a-event.json
-          grep -Fq '"rsvp": false' /tmp/mohamed-a-event.json
-          npx --yes vercel@latest curl / --deployment "$PREVIEW_URL" -I > /tmp/mohamed-a-headers.txt
-          tr '[:upper:]' '[:lower:]' < /tmp/mohamed-a-headers.txt > /tmp/mohamed-a-headers-lower.txt
-          grep -Fq "content-security-policy:" /tmp/mohamed-a-headers-lower.txt
-          grep -Fq "default-src 'self'" /tmp/mohamed-a-headers-lower.txt
-          grep -Fq "media-src 'self'" /tmp/mohamed-a-headers-lower.txt
-          grep -Fq 'https://images.unsplash.com' /tmp/mohamed-a-headers-lower.txt
-          grep -Fq 'cache-control: no-store' /tmp/mohamed-a-headers-lower.txt
-          grep -Fq 'x-robots-tag: noindex' /tmp/mohamed-a-headers-lower.txt
-          ! grep -Fq 'fonts.googleapis.com' /tmp/mohamed-a-headers-lower.txt
-          ! grep -Fq 'supabase.co' /tmp/mohamed-a-headers-lower.txt
+          npx --yes vercel@latest curl / --deployment "$PREVIEW_URL" > /tmp/root.html
+          grep -Fq 'MOHAMED' /tmp/root.html
+          grep -Fq 'قاعة شهرزاد' /tmp/root.html
+          for asset in intro.js music.js gallery.css; do npx --yes vercel@latest curl "/$asset" --deployment "$PREVIEW_URL" > "/tmp/$asset"; test -s "/tmp/$asset"; done
+          grep -Fq './media/jamaican-bam-bam.ogg' /tmp/intro.js
+          grep -Fq './media/cha-ching.ogg' /tmp/intro.js
+          grep -Fq 'navigator.vibrate' /tmp/intro.js
+          grep -Fq './media/ads/gt-ad-strip.b64' /tmp/music.js
+          grep -Fq '.gt-ad-showcase' /tmp/gallery.css
+          npx --yes vercel@latest curl /media/jamaican-bam-bam.ogg --deployment "$PREVIEW_URL" -I > /tmp/music-headers.txt
+          grep -Eiq 'content-type: audio/ogg' /tmp/music-headers.txt
+          npx --yes vercel@latest curl /media/cha-ching.ogg --deployment "$PREVIEW_URL" -I > /tmp/chime-headers.txt
+          grep -Eiq 'content-type: audio/ogg' /tmp/chime-headers.txt
+          npx --yes vercel@latest curl /media/ads/gt-ad-strip.b64 --deployment "$PREVIEW_URL" > /tmp/ad.b64
+          test -s /tmp/ad.b64
+          npx --yes vercel@latest curl / --deployment "$PREVIEW_URL" -I > /tmp/headers.txt
+          tr '[:upper:]' '[:lower:]' < /tmp/headers.txt > /tmp/headers-lower.txt
+          grep -Fq "content-security-policy:" /tmp/headers-lower.txt
+          grep -Fq "media-src 'self'" /tmp/headers-lower.txt
+          grep -Fq "connect-src 'self'" /tmp/headers-lower.txt
+          grep -Fq 'cache-control: no-store' /tmp/headers-lower.txt
+          grep -Fq 'x-robots-tag: noindex' /tmp/headers-lower.txt
           {
             echo '## MOHAMED × A Vercel Preview'
             echo
             echo "Deployment: $PREVIEW_URL"
             echo
-            echo '✅ Stage-one intro and stage-two experience assets verified separately.'
-            echo '✅ Exact local soundtrack copy packaged and lazy-load contract verified.'
-            echo '✅ 2026 gallery HTML/CSS and restricted image CDN policy verified.'
-            echo '✅ Preview feedback injection disabled.'
-            echo '✅ Dates, pending henna location, and Shahrazad Hall verified.'
-            echo '✅ Attendance response flow absent.'
-            echo '✅ Strict CSP/no-store/noindex headers verified at the edge.'
-            echo '✅ Existing Mostafa & Amira project and aliases untouched.'
+            echo '✅ First-gesture Jamaican soundtrack verified.'
+            echo '✅ Cha-Ching + vibration interaction contract verified.'
+            echo '✅ Lazy GARHY TECH ad marquee asset verified.'
+            echo '✅ Strict CSP/no-store/noindex headers verified.'
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload preview URL record

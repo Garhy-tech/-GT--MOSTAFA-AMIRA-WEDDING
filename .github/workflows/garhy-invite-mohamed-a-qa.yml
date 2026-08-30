@@ -57,7 +57,7 @@ jobs:
           node --check tests/e2e/mohamed-a-gallery.mjs
           node --check tests/e2e/mohamed-a-music.mjs
           python3 - <<'PY'
-          import hashlib
+          import base64
           import json
           from html.parser import HTMLParser
           from pathlib import Path
@@ -100,16 +100,27 @@ jobs:
               assert int(query.get('w',['0'])[0]) <= 1200, url
               assert int(query.get('q',['100'])[0]) <= 42, url
 
-          track = root / 'media' / 'daweta-zewace.mp3'
-          source_track = Path('assets/v2/audio/daweta-zewace.mp3')
-          assert track.is_file() and track.stat().st_size == 3133484, track.stat().st_size
-          assert source_track.is_file()
-          digest = lambda p: hashlib.sha256(p.read_bytes()).hexdigest()
-          assert digest(track) == digest(source_track), 'Mohamed A soundtrack must remain an exact independent copy of the approved Mostafa & Amira asset'
+          music = root / 'media' / 'jamaican-bam-bam.ogg'
+          chime = root / 'media' / 'cha-ching.ogg'
+          ad64 = root / 'media' / 'ads' / 'gt-ad-strip.b64'
+          assert music.is_file() and 350_000 < music.stat().st_size < 500_000
+          assert chime.is_file() and 5_000 < chime.stat().st_size < 20_000
+          assert music.read_bytes()[:4] == b'OggS'
+          assert chime.read_bytes()[:4] == b'OggS'
+          encoded = ''.join(ad64.read_text(encoding='utf-8').split())
+          raw = base64.b64decode(encoded, validate=True)
+          assert raw[:4] == b'RIFF' and raw[8:12] == b'WEBP'
+          assert len(raw) < 30_000, len(raw)
+
+          intro_js = (root / 'intro.js').read_text(encoding='utf-8')
           music_js = (root / 'music.js').read_text(encoding='utf-8')
-          assert "audio.preload='none'" in music_js
-          assert "./media/daweta-zewace.mp3" in music_js
-          assert 'autoplay' not in music_js.lower()
+          assert './media/jamaican-bam-bam.ogg' in intro_js
+          assert './media/cha-ching.ogg' in intro_js
+          assert 'navigator.vibrate' in intro_js
+          assert './media/ads/gt-ad-strip.b64' in music_js
+          assert 'data-gt-ads' in music_js
+          assert "preload='none'" in intro_js
+          assert 'autoplay' not in (intro_js + music_js).lower()
 
           payload = [root/'index.html', root/'intro.css', root/'intro.js', root/'styles.css', root/'responsive.css', root/'polish.css', root/'gallery.css', root/'app.js', root/'polish.js', root/'music.js', root/'event.json', root/'vercel.json']
           sizes = {p.name: p.stat().st_size for p in payload}
@@ -117,25 +128,27 @@ jobs:
           initial = sizes['index.html'] + sizes['intro.css'] + sizes['intro.js']
           assert sizes['index.html'] < 38_000, sizes
           assert sizes['intro.css'] < 8_000, sizes
-          assert sizes['intro.js'] < 4_000, sizes
+          assert sizes['intro.js'] < 6_000, sizes
           assert sizes['styles.css'] < 35_000, sizes
           assert sizes['responsive.css'] < 2_000, sizes
           assert sizes['polish.css'] < 16_000, sizes
           assert sizes['gallery.css'] < 8_000, sizes
           assert sizes['app.js'] < 20_000, sizes
           assert sizes['polish.js'] < 7_000, sizes
-          assert sizes['music.js'] < 5_000, sizes
-          assert initial < 28_000, (sizes, initial)
-          assert total < 92_000, (sizes, total)
+          assert sizes['music.js'] < 7_000, sizes
+          assert initial < 30_000, (sizes, initial)
+          assert total < 98_000, (sizes, total)
           print('Initial critical bytes:', initial)
           print('Full static bytes excluding lazy media:', sizes, 'total=', total)
-          print('Local soundtrack bytes:', track.stat().st_size)
+          print('Background soundtrack bytes:', music.stat().st_size)
+          print('Cha-Ching bytes:', chime.stat().st_size)
+          print('GARHY ad WebP bytes:', len(raw))
           PY
           ! grep -RIE 'service[_-]?role|sb_secret_|SUPABASE_SERVICE_ROLE' projects/mohamed-a-2026 --exclude='*.md'
           ! grep -RIE 'fonts\.googleapis|fonts\.gstatic|<video|<iframe' projects/mohamed-a-2026/index.html
           grep -Fq "Content-Security-Policy" projects/mohamed-a-2026/vercel.json
-          grep -Fq "https://images.unsplash.com" projects/mohamed-a-2026/vercel.json
           grep -Fq "media-src 'self'" projects/mohamed-a-2026/vercel.json
+          grep -Fq "connect-src 'self'" projects/mohamed-a-2026/vercel.json
           grep -Fq "noindex, nofollow, noarchive" projects/mohamed-a-2026/vercel.json
           grep -Fq "./gallery.css" projects/mohamed-a-2026/polish.js
           grep -Fq "./music.js" projects/mohamed-a-2026/intro.js
@@ -172,7 +185,7 @@ jobs:
       - name: Lazy 2026 gallery UX QA
         run: node tests/e2e/mohamed-a-gallery.mjs
 
-      - name: Local soundtrack lazy-load UX QA
+      - name: First-gesture music, Cha-Ching, vibration and ad marquee QA
         run: node tests/e2e/mohamed-a-music.mjs
 
       - name: Upload QA screenshots

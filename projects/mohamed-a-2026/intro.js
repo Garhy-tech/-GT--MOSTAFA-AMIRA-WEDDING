@@ -7,6 +7,53 @@ if(!intro||!enter||!template)return;
 skip?.setAttribute('inert','');
 if(matchMedia('(max-width:640px)').matches)document.querySelectorAll('.intro-burst').forEach(node=>node.remove());
 enter.focus({preventScroll:true});
+
+const MUSIC_SRC='./media/jamaican-bam-bam.ogg';
+const CHIME_SRC='./media/cha-ching.ogg';
+const music=new Audio();
+music.preload='none';
+music.src=MUSIC_SRC;
+music.volume=.56;
+music.loop=true;
+const audioState={
+  music,
+  started:false,
+  fxCount:0,
+  async startMusic(){
+    if(!music.paused)return true;
+    try{
+      await music.play();
+      this.started=true;
+      return true;
+    }catch(error){
+      this.started=false;
+      console.warn('GARHY_MUSIC_FIRST_GESTURE_BLOCKED',error);
+      return false;
+    }
+  },
+  feedback(){
+    this.fxCount+=1;
+    try{if(typeof navigator.vibrate==='function')navigator.vibrate(18)}catch{}
+    try{
+      const fx=new Audio();
+      fx.preload='auto';
+      fx.src=CHIME_SRC;
+      fx.volume=.62;
+      fx.play().catch(()=>{});
+    }catch{}
+  }
+};
+window.__garhyAudio=audioState;
+document.addEventListener('click',event=>{
+  const target=event.target instanceof Element?event.target.closest('button,a[href]'):null;
+  if(!target||target.hasAttribute('disabled')||target.getAttribute('aria-disabled')==='true')return;
+  audioState.feedback();
+  if(!audioState.started)void audioState.startMusic();
+},{capture:true});
+
+const note=document.querySelector('.intro-note');
+if(note)note.textContent='الموسيقى تبدأ مع أول ضغطة ويمكن إيقافها من زر MUSIC';
+
 let starting=false;
 const originalLabel=enter.querySelector('span')?.textContent||'ادخل الليلة';
 function loadStyle(href){return new Promise((resolve,reject)=>{const link=document.createElement('link');link.rel='stylesheet';link.href=href;link.onload=()=>resolve(link);link.onerror=()=>reject(new Error(`تعذر تحميل ${href}`));document.head.append(link)})}
@@ -18,7 +65,7 @@ async function start(){
  try{
    document.body.setAttribute('data-experience-booted','');
    const fragment=template.content.cloneNode(true);template.before(fragment);template.remove();
-   const sound=document.querySelector('[data-beat-toggle]');if(sound){sound.setAttribute('aria-label','تشغيل أغنية الفرح');const soundLabel=sound.querySelector('[data-sound-label]');if(soundLabel)soundLabel.textContent='MUSIC'}
+   const sound=document.querySelector('[data-beat-toggle]');if(sound){sound.setAttribute('aria-label','إيقاف أو تشغيل أغنية الفرح');const soundLabel=sound.querySelector('[data-sound-label]');if(soundLabel)soundLabel.textContent='MUSIC'}
    await Promise.all([
      loadStyle('./styles.css'),loadStyle('./responsive.css'),loadStyle('./polish.css'),
      loadScript('./app.js'),loadScript('./polish.js'),loadScript('./music.js')
