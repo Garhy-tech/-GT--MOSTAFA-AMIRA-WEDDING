@@ -1,0 +1,102 @@
+name: GARHY verified Vercel test-project cleanup
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/garhy-verified-vercel-test-project-cleanup.yml
+
+permissions:
+  contents: read
+
+jobs:
+  cleanup:
+    name: Delete only verified empty test projects
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+    steps:
+      - name: Re-verify and delete exact test projects
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const token = process.env.VERCEL_TOKEN;
+            if (!token) {
+              core.setFailed('VERCEL_TOKEN is unavailable to this repository workflow.');
+              return;
+            }
+
+            const teamId = 'team_mZ52AwdCUXSmkLKH3YMqqf5U';
+            const candidates = [
+              ['prj_dl9oPyGzXSXEiOvIFHHIOrGSwKLT', 'yahia-base64-encoding-test'],
+              ['prj_nvpsqNhFVqAUWERzupoxJY5yfbKj', 'yahia-sandboxref-test'],
+              ['prj_0kOoYFPS4haR6ZmPp3zQI9eIzu7q', 'yahia-atpath-test'],
+              ['prj_MKjCosPo2UoHZ3X1EuYDa9dNXCxs', 'yahia-datauri-test'],
+              ['prj_NbcpyPpnkKctPh1HI30BmNLLYZP0', 'yahia-amira-deploy-test'],
+            ];
+
+            async function read(path) {
+              const response = await fetch('https://api.vercel.com' + path, {
+                headers: { Authorization: 'Bearer ' + token },
+              });
+              if (!response.ok) {
+                throw new Error('Vercel API ' + response.status + ' for ' + path);
+              }
+              return response.json();
+            }
+
+            const verified = [];
+            for (const [id, expectedName] of candidates) {
+              const project = await read('/v9/projects/' + encodeURIComponent(id) + '?teamId=' + encodeURIComponent(teamId));
+              const envResponse = await read('/v9/projects/' + encodeURIComponent(id) + '/env?teamId=' + encodeURIComponent(teamId));
+              const deploymentResponse = await read('/v6/deployments?projectId=' + encodeURIComponent(id) + '&teamId=' + encodeURIComponent(teamId) + '&limit=100');
+              const domainNames = (project.domains || [])
+                .map((domain) => typeof domain === 'string' ? domain : domain.name)
+                .filter(Boolean);
+              const aliasNames = (deploymentResponse.deployments || [])
+                .flatMap((deployment) => deployment.alias || deployment.aliases || [])
+                .map((alias) => typeof alias === 'string' ? alias : alias.domain)
+                .filter(Boolean);
+              const exactTestName = /^yahia-(base64-encoding|sandboxref|atpath|datauri|amira-deploy)-test$/.test(expectedName);
+              const hasGitLink = Boolean(project.link && (project.link.repo || project.link.repoId || project.link.org));
+              const safe = project.name === expectedName
+                && exactTestName
+                && (envResponse.envs || []).length === 0
+                && domainNames.every((name) => name.endsWith('.vercel.app'))
+                && aliasNames.every((name) => name.endsWith('.vercel.app'))
+                && !hasGitLink;
+
+              if (!safe) {
+                throw new Error('Safety gate failed for ' + id + '; no project deletions were started.');
+              }
+              verified.push({ id, name: project.name, deploymentCount: (deploymentResponse.deployments || []).length });
+            }
+
+            const deleted = [];
+            for (const project of verified) {
+              const response = await fetch(
+                'https://api.vercel.com/v9/projects/' + encodeURIComponent(project.id) + '?teamId=' + encodeURIComponent(teamId),
+                { method: 'DELETE', headers: { Authorization: 'Bearer ' + token } },
+              );
+              if (![200, 202, 204].includes(response.status)) {
+                throw new Error('Delete failed with ' + response.status + ' for ' + project.id);
+              }
+
+              const verification = await fetch(
+                'https://api.vercel.com/v9/projects/' + encodeURIComponent(project.id) + '?teamId=' + encodeURIComponent(teamId),
+                { headers: { Authorization: 'Bearer ' + token } },
+              );
+              if (![404, 410].includes(verification.status)) {
+                throw new Error('Post-delete verification failed for ' + project.id + ' with ' + verification.status);
+              }
+              deleted.push(project);
+              console.log('Deleted verified test project: ' + project.id);
+            }
+
+            await core.summary
+              .addHeading('GARHY Vercel verified cleanup')
+              .addCodeBlock(JSON.stringify({ deleted }, null, 2), 'json')
+              .addRaw('\nDeleted only exact empty test projects after repeat verification.\n')
+              .write();
