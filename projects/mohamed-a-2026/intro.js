@@ -65,6 +65,8 @@ async function start(){
  try{
    document.body.setAttribute('data-experience-booted','');
    const fragment=template.content.cloneNode(true);template.before(fragment);template.remove();
+   const grain=document.querySelector('.grain');
+   if(grain){grain.style.backgroundImage='radial-gradient(circle at 20% 30%,rgba(255,255,255,.18) 0 1px,transparent 1.4px),radial-gradient(circle at 75% 65%,rgba(255,255,255,.12) 0 1px,transparent 1.5px)';grain.style.backgroundSize='17px 17px,23px 23px';grain.style.backgroundPosition='0 0,7px 9px'}
    const sound=document.querySelector('[data-beat-toggle]');if(sound){sound.setAttribute('aria-label','إيقاف أو تشغيل أغنية الفرح');const soundLabel=sound.querySelector('[data-sound-label]');if(soundLabel)soundLabel.textContent='MUSIC'}
    await Promise.all([
      loadStyle('./styles.css'),loadStyle('./responsive.css'),loadStyle('./polish.css'),
