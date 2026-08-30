@@ -60,8 +60,15 @@ if(footer&&!document.querySelector('[data-gt-ads]')){
  }
  if(!('IntersectionObserver'in window))void loadAds();
  else{
-   const observer=new IntersectionObserver(entries=>{if(entries.some(entry=>entry.isIntersecting)){observer.disconnect();void loadAds()}},{rootMargin:'700px 0px',threshold:.01});
+   const observer=new IntersectionObserver(entries=>{if(entries.some(entry=>entry.isIntersecting)){observer.disconnect();removeEventListener('scroll',nearViewport);void loadAds()}},{rootMargin:'700px 0px',threshold:.01});
+   function nearViewport(){
+     if(loaded){removeEventListener('scroll',nearViewport);return}
+     const rect=section.getBoundingClientRect();
+     if(rect.top<innerHeight+900&&rect.bottom>-900){observer.disconnect();removeEventListener('scroll',nearViewport);void loadAds()}
+   }
    observer.observe(section);
+   addEventListener('scroll',nearViewport,{passive:true});
+   requestAnimationFrame(nearViewport);
  }
 }
 })();
