@@ -26,7 +26,8 @@ audio.addEventListener('pause',()=>setState(false));
 audio.addEventListener('timeupdate',()=>{const value=audio.duration?Math.min(1,audio.currentTime/audio.duration):0;button.style.setProperty('--music-progress',value.toFixed(4))});
 audio.addEventListener('ended',()=>{audio.currentTime=0;button.style.setProperty('--music-progress','0');setState(false)});
 audio.addEventListener('error',()=>{setState(false);if(label)label.textContent='RETRY'});
-addEventListener('pagehide',()=>audio.pause());
+let adObjectUrl='';
+addEventListener('pagehide',()=>{audio.pause();if(adObjectUrl){URL.revokeObjectURL(adObjectUrl);adObjectUrl=''}},{once:true});
 
 const footer=document.querySelector('footer[data-shell]');
 if(footer&&!document.querySelector('[data-gt-ads]')){
@@ -39,14 +40,21 @@ if(footer&&!document.querySelector('[data-gt-ads]')){
  const images=[...section.querySelectorAll('[data-gt-ad-image]')];
  const parts=['./media/ads/gt-ad-strip.b64'];
  let loaded=false;
+ function webpBlobUrl(encoded){
+   const binary=atob(encoded);
+   const bytes=new Uint8Array(binary.length);
+   for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);
+   return URL.createObjectURL(new Blob([bytes],{type:'image/webp'}));
+ }
  async function loadAds(){
    if(loaded)return;loaded=true;
    try{
      const chunks=await Promise.all(parts.map(async src=>{const response=await fetch(src,{cache:'force-cache'});if(!response.ok)throw new Error(`Ad asset ${response.status}`);return response.text()}));
      const encoded=chunks.join('').replace(/\s+/g,'');
      if(!encoded)throw new Error('Ad asset empty');
-     const src=`data:image/webp;base64,${encoded}`;
-     images.forEach(img=>img.src=src);
+     if(adObjectUrl)URL.revokeObjectURL(adObjectUrl);
+     adObjectUrl=webpBlobUrl(encoded);
+     images.forEach(img=>img.src=adObjectUrl);
      section.dataset.adsReady='true';
    }catch(error){loaded=false;section.dataset.adsReady='error';console.warn('GARHY_AD_STRIP_FAILED',error)}
  }
