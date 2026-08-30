@@ -1,0 +1,49 @@
+name: Delete verified orphaned WordPress preview
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  delete:
+    if: github.event.pull_request.head.ref == 'ops/delete-orphaned-wordpress-preview-20260830'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Re-verify and delete one orphaned error preview
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          node <<'NODE'
+          const teamId='team_mZ52AwdCUXSmkLKH3YMqqf5U';
+          const projectId='prj_Beg1hNSaC2MbNy6KOGEEWlSNMd6H';
+          const deploymentId='dpl_CGBhPDyMDi4BVkcC6JGj1zJKcUvt';
+          const token=process.env.VERCEL_TOKEN;
+          if(!token)throw new Error('Missing Vercel credential');
+          async function request(method,path){
+            const response=await fetch('https://api.vercel.com'+path,{method,headers:{Authorization:'Bearer '+token}});
+            const text=await response.text();let data={};try{data=text?JSON.parse(text):{}}catch{}
+            return {response,data};
+          }
+          const project=await request('GET','/v9/projects/'+projectId+'?teamId='+teamId);
+          if(!project.response.ok||project.data.name!=='gt-marketplace-wordpress')throw new Error('Project identity mismatch');
+          const fetched=await request('GET','/v13/deployments/'+deploymentId+'?teamId='+teamId);
+          const detail=fetched.data.deployment||fetched.data;
+          const id=detail.uid||detail.id||null;
+          const match=fetched.response.ok&&id===deploymentId&&(detail.projectId||detail.project?.id)===projectId&&detail.target==null&&detail.readyState==='ERROR'&&detail.meta?.githubCommitRef==='release/garhy-zero-drift-20260820';
+          if(!match)throw new Error('Deployment safety check failed');
+          const deleted=await request('DELETE','/v13/deployments/'+deploymentId+'?teamId='+teamId);
+          if(!deleted.response.ok)throw new Error('Delete failed');
+          const post=await request('GET','/v13/deployments/'+deploymentId+'?teamId='+teamId);
+          if(post.response.status!==404)throw new Error('Post-delete verification failed');
+          console.log(JSON.stringify({outcome:'deleted'}));
+          NODE
+      - name: Remove temporary source branch
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          curl --fail --silent --show-error             -X DELETE             -H "Authorization: Bearer $GITHUB_TOKEN"             -H "Accept: application/vnd.github+json"             "https://api.github.com/repos/Garhy-tech/-GT--MOSTAFA-AMIRA-WEDDING/git/refs/heads/ops/delete-orphaned-wordpress-preview-20260830"
