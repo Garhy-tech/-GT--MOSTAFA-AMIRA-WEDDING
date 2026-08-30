@@ -58,7 +58,8 @@ jobs:
             const listing = await listingResponse.json();
             const candidateIds = (listing.deployments || [])
               .filter((deployment) => !deployment.target && deployment.id !== productionId)
-              .map((deployment) => deployment.id || deployment.uid)\n              .filter(Boolean);
+              .map((deployment) => deployment.id || deployment.uid)
+              .filter(Boolean);
 
             const deleted = [];
             const held = [];
