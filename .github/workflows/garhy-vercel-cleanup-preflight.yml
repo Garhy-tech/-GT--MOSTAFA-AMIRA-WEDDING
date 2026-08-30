@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - ops/vercel-cleanup-preflight-20260830
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: read
