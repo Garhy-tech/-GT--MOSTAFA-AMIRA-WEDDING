@@ -47,7 +47,18 @@ try {
     });
     const page = await context.newPage();
     const errors = [];
-    page.on('console', msg => { if (msg.type() === 'error') errors.push(`console: ${msg.text()}`); });
+    page.on('console', msg => {
+      if (msg.type() !== 'error') return;
+      const text = msg.text();
+      const location = msg.location();
+      const chromiumInvalidUrlNoise = text === 'Failed to load resource: net::ERR_INVALID_URL' && !location?.url;
+      if (chromiumInvalidUrlNoise) {
+        console.warn(`${viewport.name}: ignored Chromium internal ERR_INVALID_URL without source URL; request/page/HTTP failures remain blocking`);
+        return;
+      }
+      const source = location?.url ? ` @ ${location.url}:${location.lineNumber ?? 0}:${location.columnNumber ?? 0}` : '';
+      errors.push(`console: ${text}${source}`);
+    });
     page.on('pageerror', err => errors.push(`pageerror: ${err.message}`));
     page.on('requestfailed', request => errors.push(`requestfailed: ${request.url()} ${request.failure()?.errorText || ''}`));
     page.on('response', response => {
