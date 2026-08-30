@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   retire:
-    if: github.event.action == 'reopened' && github.event.pull_request.head.ref == 'ops/vercel-cleanup-preflight-20260830'
+    if: github.event.pull_request.head.ref == 'ops/vercel-cleanup-preflight-20260830'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
