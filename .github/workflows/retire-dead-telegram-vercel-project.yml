@@ -1,0 +1,57 @@
+name: Retire verified dead Telegram Vercel project
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  retire:
+    if: github.event.pull_request.head.ref == 'ops/retire-dead-telegram-vercel-project-20260830'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify no configuration and delete dead hosting project
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          node <<'NODE'
+          const teamId='team_mZ52AwdCUXSmkLKH3YMqqf5U';
+          const projectId='prj_og5jlsfViLKeWqiufQ33lYBVzrO9';
+          const token=process.env.VERCEL_TOKEN;
+          if(!token)throw new Error('Missing Vercel credential');
+          async function request(method,path){
+            const response=await fetch('https://api.vercel.com'+path,{method,headers:{Authorization:'Bearer '+token}});
+            const text=await response.text();let data={};try{data=text?JSON.parse(text):{}}catch{}
+            return {response,data};
+          }
+          const project=await request('GET','/v9/projects/'+projectId+'?teamId='+teamId);
+          if(!project.response.ok||project.data.name!=='garhy-tech-telegram-n8n')throw new Error('Project identity mismatch');
+          if(project.data.link?.repo!=='garhy-tech-telegram-n8n')throw new Error('Unexpected Git integration');
+          if(!(project.data.domains||[]).every(d=>typeof d==='string'&&d.endsWith('.vercel.app')))throw new Error('External custom domain present');
+          const env=await request('GET','/v9/projects/'+projectId+'/env?teamId='+teamId);
+          const envRows=env.data.envs||env.data||[];
+          if(!env.response.ok||!Array.isArray(envRows)||envRows.length!==0)throw new Error('Environment configuration exists');
+          const listed=await request('GET','/v6/deployments?projectId='+projectId+'&teamId='+teamId+'&limit=100');
+          const deployments=listed.data.deployments||[];
+          const only=deployments.length===1?deployments[0]:null;
+          const onlyId=only?.uid||only?.id||null;
+          if(!listed.response.ok||!only||only.target!=='production'||only.state!=='READY'||!onlyId)throw new Error('Deployment history is not the expected single dead deployment');
+          const detail=await request('GET','/v13/deployments/'+onlyId+'?teamId='+teamId);
+          const deployment=detail.data.deployment||detail.data;
+          const match=detail.response.ok&&(deployment.uid||deployment.id)===onlyId&&(deployment.projectId||deployment.project?.id)===projectId&&deployment.target==='production'&&deployment.readyState==='READY';
+          if(!match)throw new Error('Deployment identity mismatch');
+          const deleted=await request('DELETE','/v9/projects/'+projectId+'?teamId='+teamId);
+          if(!deleted.response.ok)throw new Error('Project deletion failed');
+          const post=await request('GET','/v9/projects/'+projectId+'?teamId='+teamId);
+          if(post.response.status!==404)throw new Error('Post-delete verification failed');
+          console.log(JSON.stringify({outcome:'deleted',environmentCount:0,deploymentCount:1}));
+          NODE
+      - name: Remove temporary source branch
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          curl --fail --silent --show-error             -X DELETE             -H "Authorization: Bearer $GITHUB_TOKEN"             -H "Accept: application/vnd.github+json"             "https://api.github.com/repos/Garhy-tech/-GT--MOSTAFA-AMIRA-WEDDING/git/refs/heads/ops/retire-dead-telegram-vercel-project-20260830"
