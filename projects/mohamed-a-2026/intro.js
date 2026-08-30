@@ -55,7 +55,8 @@ window.__garhyAudio=audioState;
 document.addEventListener('click',event=>{
   const target=event.target instanceof Element?event.target.closest('button,a[href]'):null;
   if(!target||target.hasAttribute('disabled')||target.getAttribute('aria-disabled')==='true')return;
-  if(!audioState.started)void audioState.startMusic();
+  const isMusicToggle=target.matches('[data-music-toggle]');
+  if(!isMusicToggle&&!audioState.started)void audioState.startMusic();
   audioState.feedback();
 },{capture:true});
 
