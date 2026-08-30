@@ -67,7 +67,7 @@ try {
   assert.equal(await page.locator('[data-gt-ad-image]').count(), 2, 'professional marquee must use two seamless strip copies');
   assert.equal(adRequests.length, 1, 'ad strip must lazy-load one compact local base64 asset only near the end of the page');
   const src = await page.locator('[data-gt-ad-image]').first().getAttribute('src');
-  assert.ok(src?.startsWith('data:image/webp;base64,'), 'ad strip must reconstruct a local WebP image');
+  assert.ok(src?.startsWith('blob:'), 'ad strip must reconstruct the local WebP bytes into a browser-safe Blob URL');
   await context.close();
 } finally {
   await browser.close();
