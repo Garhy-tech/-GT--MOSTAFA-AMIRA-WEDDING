@@ -1,0 +1,110 @@
+name: Retire verified bank preview clutter
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  retire:
+    if: github.event.pull_request.head.ref == 'ops/retire-bank-preview-clutter-20260830'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+    steps:
+      - name: Re-verify and retire only empty bank previews
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const token = process.env.VERCEL_TOKEN;
+            if (!token) {
+              core.setFailed('VERCEL_TOKEN is unavailable.');
+              return;
+            }
+
+            const teamId = 'team_mZ52AwdCUXSmkLKH3YMqqf5U';
+            const projectId = 'prj_Y6mgWCmrkhrcAgYVmSueGkBghZyB';
+            const productionId = 'dpl_FBE9Z8uqJt9UB8Tj7z4mw9vpLKEK';
+            const temporaryBranch = 'ops/retire-bank-preview-clutter-20260830';
+            const previewIds = [
+              'dpl_4W7zRxdsYL8drZzL4ELR6ytSGh8C',
+              'dpl_DYvg8Zo6uyKuuFWpy1bKYkH7GWeA',
+              'dpl_CFvCDrPTV92xCiLUDLRa5FW4PKpb',
+              'dpl_3KiRbJYvyuXYVqsqbvZyRgLT5Euk',
+              'dpl_2A24Emxatw6YQHQHy4X546yqmAvG',
+              'dpl_oZ2KDakWd4kZB6dTMjg9MbVguyXo',
+              'dpl_4Zu5f1j53UqAxNwWbifiFBvfzWCm',
+              'dpl_B7eaFw3iR9F6GuC91HbVgow2bQst',
+              'dpl_BV4t7VWeGvq6QKHMWGJcH61fYgo4',
+              'dpl_44GxhhedAThGNCD5maxXTkN4prv8',
+              'dpl_CXWSzE9UXpS3Mkdes7pynxdrwWRW',
+              'dpl_E9ekruc5znvE3yP5Zu6wY473LFSg',
+            ];
+
+            async function details(id) {
+              const response = await fetch(
+                'https://api.vercel.com/v13/deployments/' + encodeURIComponent(id) + '?teamId=' + encodeURIComponent(teamId),
+                { headers: { Authorization: 'Bearer ' + token } },
+              );
+              if (!response.ok) throw new Error('Unable to inspect ' + id + ': ' + response.status);
+              return response.json();
+            }
+
+            const production = await details(productionId);
+            if (!(production.id === productionId
+              && production.project && production.project.id === projectId
+              && production.readyState === 'READY'
+              && production.target === 'production')) {
+              throw new Error('Safety gate failed: current production anchor changed.');
+            }
+
+            const verified = [];
+            for (const id of previewIds) {
+              const deployment = await details(id);
+              const aliases = deployment.alias || [];
+              const githubMetadata = Object.keys(deployment.meta || {}).some((key) => key.toLowerCase().startsWith('github'));
+              const safe = deployment.id === id
+                && deployment.project && deployment.project.id === projectId
+                && deployment.readyState === 'READY'
+                && !deployment.target
+                && aliases.length === 0
+                && !deployment.source
+                && !githubMetadata
+                && deployment.createdAt < production.createdAt;
+              if (!safe) {
+                throw new Error('Safety gate failed for ' + id + '; no preview deletions were started.');
+              }
+              verified.push(id);
+            }
+
+            const deleted = [];
+            for (const id of verified) {
+              const response = await fetch(
+                'https://api.vercel.com/v13/deployments/' + encodeURIComponent(id) + '?teamId=' + encodeURIComponent(teamId),
+                { method: 'DELETE', headers: { Authorization: 'Bearer ' + token } },
+              );
+              if (![200, 202, 204].includes(response.status)) {
+                throw new Error('Delete failed with ' + response.status + ' for ' + id);
+              }
+              const verification = await fetch(
+                'https://api.vercel.com/v13/deployments/' + encodeURIComponent(id) + '?teamId=' + encodeURIComponent(teamId),
+                { headers: { Authorization: 'Bearer ' + token } },
+              );
+              if (![404, 410].includes(verification.status)) {
+                throw new Error('Post-delete verification failed for ' + id + ' with ' + verification.status);
+              }
+              deleted.push(id);
+            }
+
+            const { owner, repo } = context.repo;
+            await github.rest.git.deleteRef({ owner, repo, ref: 'heads/' + temporaryBranch });
+
+            await core.summary
+              .addHeading('GARHY bank preview cleanup')
+              .addRaw('\nDeleted ' + deleted.length + ' verified empty non-production previews.\n')
+              .addRaw('Kept the current production deployment and all production history.\n')
+              .write();
