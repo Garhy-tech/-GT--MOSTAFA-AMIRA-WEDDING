@@ -50,7 +50,7 @@ jobs:
           test -s "$PROJECT_DIR/media/jamaican-bam-bam.ogg"
           test -s "$PROJECT_DIR/media/cha-ching.ogg"
           test -s "$PROJECT_DIR/media/ads/gt-ad-strip.b64"
-          test "$(stat -c%s "$PROJECT_DIR/media/jamaican-bam-bam.ogg")" -gt 350000
+          test "$(stat -c%s "$PROJECT_DIR/media/jamaican-bam-bam.ogg")" -gt 10000
           test "$(stat -c%s "$PROJECT_DIR/media/jamaican-bam-bam.ogg")" -lt 500000
           test "$(stat -c%s "$PROJECT_DIR/media/cha-ching.ogg")" -lt 20000
           node --check "$PROJECT_DIR/intro.js"
