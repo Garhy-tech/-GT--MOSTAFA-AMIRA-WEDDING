@@ -1,0 +1,133 @@
+name: Retire redundant GT Marketplace previews
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  retire:
+    if: github.event.pull_request.head.ref == 'ops/retire-redundant-marketplace-previews-20260830'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Re-verify aliases and delete only superseded previews
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          node <<'NODE'
+          const teamId = 'team_mZ52AwdCUXSmkLKH3YMqqf5U';
+          const projectId = 'prj_F4A5JOuIRx8b4wpezcnrayTE03jB';
+          const expectedProject = 'gt-marketplace';
+          const token = process.env.VERCEL_TOKEN;
+          if (!token) throw new Error('Missing Vercel credential');
+          const base = 'https://api.vercel.com';
+
+          async function request(method, path) {
+            const response = await fetch(base + path, {
+              method,
+              headers: { Authorization: 'Bearer ' + token }
+            });
+            const text = await response.text();
+            let data = {};
+            try { data = text ? JSON.parse(text) : {}; } catch {}
+            return { response, data, text };
+          }
+
+          async function aliasTarget(alias) {
+            const encoded = encodeURIComponent(alias);
+            for (const version of ['v4', 'v2']) {
+              const result = await request('GET', '/' + version + '/aliases/' + encoded + '?teamId=' + teamId);
+              if (result.response.status === 404) continue;
+              if (!result.response.ok) {
+                throw new Error('Unable to verify alias ' + alias + ': HTTP ' + result.response.status);
+              }
+              const data = result.data;
+              const id = data.deploymentId || data.deployment?.id || data.deployment?.uid || data.deployment?.deploymentId || null;
+              if (!id) throw new Error('Alias response has no deployment ID for ' + alias);
+              return id;
+            }
+            throw new Error('Alias not found: ' + alias);
+          }
+
+          const projectResult = await request('GET', '/v9/projects/' + projectId + '?teamId=' + teamId);
+          if (!projectResult.response.ok || projectResult.data.name !== expectedProject) {
+            throw new Error('Unexpected Vercel project');
+          }
+          if ((projectResult.data.domains || []).length !== 0) {
+            throw new Error('Project has custom domains; stop for manual verification');
+          }
+
+          const list = await request('GET', '/v6/deployments?projectId=' + projectId + '&teamId=' + teamId + '&limit=100');
+          if (!list.response.ok) throw new Error('Unable to list deployments');
+          const previews = (list.data.deployments || []).filter(d =>
+            d.target == null &&
+            d.state === 'READY' &&
+            d.meta?.githubCommitRef &&
+            d.meta?.branchAlias
+          );
+          const groups = new Map();
+          for (const dep of previews) {
+            const key = dep.meta.githubCommitRef;
+            const rows = groups.get(key) || [];
+            rows.push(dep);
+            groups.set(key, rows);
+          }
+          const holds = [];
+          const candidates = [];
+          const retained = [];
+          for (const [ref, rows] of groups) {
+            rows.sort((a, b) => b.created - a.created);
+            const newest = rows[0];
+            retained.push({ ref, id: newest.id });
+            for (const older of rows.slice(1)) {
+              const detailResult = await request('GET', '/v13/deployments/' + older.id + '?teamId=' + teamId);
+              const detail = detailResult.data.deployment || detailResult.data;
+              const aliases = detail.alias || [];
+              const safe =
+                detailResult.response.ok &&
+                detail.project?.id === projectId &&
+                detail.target == null &&
+                detail.readyState === 'READY' &&
+                detail.meta?.githubCommitRef === ref &&
+                aliases.length > 0 &&
+                aliases.every(alias => alias === older.meta.branchAlias);
+              if (!safe) {
+                holds.push({ ref, id: older.id, reason: 'deployment metadata or aliases differ' });
+                continue;
+              }
+              const targets = [];
+              for (const alias of aliases) targets.push(await aliasTarget(alias));
+              if (!targets.every(id => id === newest.id)) {
+                holds.push({ ref, id: older.id, reason: 'alias does not resolve to newest branch deployment' });
+                continue;
+              }
+              candidates.push({ ref, id: older.id, retained: newest.id });
+            }
+          }
+          if (holds.length) {
+            console.log(JSON.stringify({ outcome: 'hold', retained, holds }));
+            throw new Error('One or more previews need manual verification; no deletions made');
+          }
+
+          for (const candidate of candidates) {
+            const deleted = await request('DELETE', '/v13/deployments/' + candidate.id + '?teamId=' + teamId);
+            if (!deleted.response.ok) throw new Error('Delete failed for ' + candidate.id);
+            const post = await request('GET', '/v13/deployments/' + candidate.id + '?teamId=' + teamId);
+            if (post.response.status !== 404) throw new Error('Post-delete verification failed for ' + candidate.id);
+          }
+          console.log(JSON.stringify({
+            outcome: 'deleted',
+            deletedCount: candidates.length,
+            deleted: candidates,
+            retained
+          }));
+          NODE
+      - name: Remove temporary source branch
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          curl --fail --silent --show-error             -X DELETE             -H "Authorization: Bearer $GITHUB_TOKEN"             -H "Accept: application/vnd.github+json"             "https://api.github.com/repos/Garhy-tech/-GT--MOSTAFA-AMIRA-WEDDING/git/refs/heads/ops/retire-redundant-marketplace-previews-20260830"
