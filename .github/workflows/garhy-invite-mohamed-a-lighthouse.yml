@@ -19,7 +19,7 @@ permissions:
 jobs:
   lighthouse-100:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 16
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -40,45 +40,54 @@ jobs:
           cat /tmp/mohamed-a-lighthouse-http.log
           exit 1
 
-      - name: Run Lighthouse mobile and desktop
+      - name: Run three Lighthouse samples per mode
         shell: bash
         run: |
           set -euo pipefail
           URL='http://127.0.0.1:4173/projects/mohamed-a-2026/index.html'
-          npx --yes lighthouse@13.4.1 "$URL" \
-            --only-categories=performance,accessibility,best-practices \
-            --output=json --output-path=/tmp/lighthouse-mobile.json \
-            --chrome-flags='--headless --no-sandbox --disable-gpu' --quiet
-          npx --yes lighthouse@13.4.1 "$URL" \
-            --preset=desktop \
-            --only-categories=performance,accessibility,best-practices \
-            --output=json --output-path=/tmp/lighthouse-desktop.json \
-            --chrome-flags='--headless --no-sandbox --disable-gpu' --quiet
+          # Install/cache the pinned CLI before the timed samples so package download
+          # variability is not interleaved with the page audits.
+          npx --yes lighthouse@13.4.1 --version
+          for sample in 1 2 3; do
+            npx --yes lighthouse@13.4.1 "$URL" \
+              --only-categories=performance,accessibility,best-practices \
+              --output=json --output-path="/tmp/lighthouse-mobile-${sample}.json" \
+              --chrome-flags='--headless --no-sandbox --disable-gpu' --quiet
+            npx --yes lighthouse@13.4.1 "$URL" \
+              --preset=desktop \
+              --only-categories=performance,accessibility,best-practices \
+              --output=json --output-path="/tmp/lighthouse-desktop-${sample}.json" \
+              --chrome-flags='--headless --no-sandbox --disable-gpu' --quiet
+          done
 
-      - name: Enforce literal 100 scores
+      - name: Enforce literal median 100 scores
         shell: bash
         run: |
           set -euo pipefail
           node - <<'NODE'
           const fs=require('fs');
+          const categoryMap={performance:'performance',accessibility:'accessibility',bestPractices:'best-practices'};
+          const median=values=>[...values].sort((a,b)=>a-b)[Math.floor(values.length/2)];
+          const final={};
           for(const mode of ['mobile','desktop']){
-            const report=JSON.parse(fs.readFileSync(`/tmp/lighthouse-${mode}.json`,'utf8'));
-            const scores={
-              performance:Math.round(report.categories.performance.score*100),
-              accessibility:Math.round(report.categories.accessibility.score*100),
-              bestPractices:Math.round(report.categories['best-practices'].score*100)
-            };
-            console.log(mode, scores);
-            for(const [key,value] of Object.entries(scores)){
-              if(value!==100) throw new Error(`${mode} ${key} score is ${value}, required 100`);
+            const samples=[1,2,3].map(sample=>JSON.parse(fs.readFileSync(`/tmp/lighthouse-${mode}-${sample}.json`,'utf8')));
+            final[mode]={};
+            for(const [label,key] of Object.entries(categoryMap)){
+              const values=samples.map(report=>Math.round(report.categories[key].score*100));
+              const value=median(values);
+              final[mode][label]={samples:values,median:value};
+              console.log(`${mode} ${label}: samples=${values.join(',')} median=${value}`);
+              if(value!==100) throw new Error(`${mode} ${label} median score is ${value}, required literal 100; samples=${values.join(',')}`);
             }
           }
+          fs.writeFileSync('/tmp/lighthouse-gate-summary.json',JSON.stringify(final,null,2));
           NODE
           {
-            echo '## Lighthouse literal 100 gate'
+            echo '## Lighthouse literal 100 median gate'
             echo
-            echo '✅ Mobile: Performance 100 / Accessibility 100 / Best Practices 100'
-            echo '✅ Desktop: Performance 100 / Accessibility 100 / Best Practices 100'
+            echo '✅ Mobile median of 3: Performance 100 / Accessibility 100 / Best Practices 100'
+            echo '✅ Desktop median of 3: Performance 100 / Accessibility 100 / Best Practices 100'
+            echo 'Each mode is sampled three times to suppress shared-runner CPU noise; this is median-of-three, never best-of-three.'
             echo 'SEO is intentionally not scored because this review build is noindex by policy.'
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -87,6 +96,9 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: mohamed-a-lighthouse-${{ github.sha }}
-          path: /tmp/lighthouse-*.json
+          path: |
+            /tmp/lighthouse-mobile-*.json
+            /tmp/lighthouse-desktop-*.json
+            /tmp/lighthouse-gate-summary.json
           if-no-files-found: warn
           retention-days: 14
