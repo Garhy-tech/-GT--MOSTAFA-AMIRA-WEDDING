@@ -28,7 +28,7 @@ jobs:
       RELEASE_DIR: /tmp/garhy-invite-mohamed-a-release
     steps:
       - name: Checkout tested source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Preview deployment preflight
         id: preflight
@@ -193,7 +193,7 @@ jobs:
 
       - name: Upload preview URL record
         if: steps.preflight.outputs.ready == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: garhy-invite-mohamed-a-preview-${{ github.sha }}
           path: mohamed-a-preview-url.txt
