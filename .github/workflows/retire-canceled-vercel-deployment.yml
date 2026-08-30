@@ -1,0 +1,80 @@
+name: Retire verified canceled Vercel deployment
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  retire:
+    if: github.event.pull_request.head.ref == 'ops/retire-canceled-vercel-deployment-20260830'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+    steps:
+      - name: Re-verify and retire only canceled preview deployment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const token = process.env.VERCEL_TOKEN;
+            if (!token) {
+              core.setFailed('VERCEL_TOKEN is unavailable.');
+              return;
+            }
+
+            const teamId = 'team_mZ52AwdCUXSmkLKH3YMqqf5U';
+            const deploymentId = 'dpl_CsoXgRnKWinidHPDQbFoV5Yz93LL';
+            const expectedProjectId = 'prj_F4A5JOuIRx8b4wpezcnrayTE03jB';
+            const temporaryBranch = 'ops/retire-canceled-vercel-deployment-20260830';
+
+            const detailsResponse = await fetch(
+              'https://api.vercel.com/v13/deployments/' + encodeURIComponent(deploymentId) + '?teamId=' + encodeURIComponent(teamId),
+              { headers: { Authorization: 'Bearer ' + token } },
+            );
+            if (!detailsResponse.ok) {
+              throw new Error('Unable to inspect deployment: ' + detailsResponse.status);
+            }
+            const deployment = await detailsResponse.json();
+            const aliases = deployment.alias || [];
+            const safe = deployment.id === deploymentId
+              && deployment.project && deployment.project.id === expectedProjectId
+              && deployment.readyState === 'CANCELED'
+              && !deployment.target
+              && aliases.every((alias) => String(alias).endsWith('.vercel.app'));
+
+            if (!safe) {
+              throw new Error('Safety gate failed; deployment was not deleted.');
+            }
+
+            const deletionResponse = await fetch(
+              'https://api.vercel.com/v13/deployments/' + encodeURIComponent(deploymentId) + '?teamId=' + encodeURIComponent(teamId),
+              { method: 'DELETE', headers: { Authorization: 'Bearer ' + token } },
+            );
+            if (![200, 202, 204].includes(deletionResponse.status)) {
+              throw new Error('Deployment deletion failed with ' + deletionResponse.status);
+            }
+
+            const verificationResponse = await fetch(
+              'https://api.vercel.com/v13/deployments/' + encodeURIComponent(deploymentId) + '?teamId=' + encodeURIComponent(teamId),
+              { headers: { Authorization: 'Bearer ' + token } },
+            );
+            if (![404, 410].includes(verificationResponse.status)) {
+              throw new Error('Post-delete verification failed with ' + verificationResponse.status);
+            }
+
+            const { owner, repo } = context.repo;
+            await github.rest.git.deleteRef({
+              owner,
+              repo,
+              ref: 'heads/' + temporaryBranch,
+            });
+
+            await core.summary
+              .addHeading('GARHY canceled deployment retired')
+              .addRaw('\nDeleted canceled non-production deployment: ' + deploymentId + '\n')
+              .addRaw('Retained its Git branch and all production deployments.\n')
+              .write();
